@@ -1,7 +1,7 @@
-
+#!/data/data/com.termux/files/usr/bin/bash -e
 
 SURUM=2024091801
-TEMEL_URL=https://image-nethunter.kali.org/nethunter-fs/kali-daily
+TEMEL_URL="https://images.kali.org/nethunter"
 KULLANICI_ADI=kali
 LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
 
@@ -27,17 +27,12 @@ function renkli_yaz() {
 function banner_yazdir() {
     clear
     local banner=$(cat <<- EOF
-         @@@@@@   @@@@@@@   @@@  @@@  @@@   @@@@@@   
-        @@@@@@@@  @@@@@@@@  @@@  @@@  @@@  @@@@@@@@  
-        @@!  @@@  @@!  @@@  @@!  @@!  @@@  @@!  @@@  
-        !@!  @!@  !@!  @!@  !@!  !@!  @!@  !@!  @!@  
-        @!@!@!@!  @!@!!@!   !!@  @!@  !@!  @!@!@!@!  
-        !!!@!!!!  !!@!@!    !!!  !@!  !!!  !!!@!!!!  
-        !!:  !!!  !!: :!!   !!:  :!:  !!:  !!:  !!!  
-        :!:  !:!  :!:  !:!  :!:   ::!!:!   :!:  !:!  
-        ::   :::  ::   :::   ::    ::::    ::   :::  
-         :   : :   :   : :  :       :       :   : :  
-        
+'/¯¯¯¯/\¯¯¯¯\‚ |¯¯¯¯|\¯¯¯¯\‚ |¯¯¯¯| |¯¯¯¯'|    '|¯¯¯¯'| '/¯¯¯¯/\¯¯¯¯\‚ 
+|:·.·.·:|_|:·.·.·:'| |:·.·.·:|/____/| |¯¯¯¯| |:·.·.·:'|    '|:·.·.·:'| |:·.·.·:|_|:·.·.·:'| 
+|:·.·.·:|¯|:·.·.·:'| |:·.·.·:|\¯¯¯¯\| |:·.·.·:| |\:·.·.·:\   /:·.·.·:/| |:·.·.·:|¯|:·.·.·:'| 
+|____|:‚|____'| |____|·|____|'‚|____| |:'\____\/____/':| |____|:‚|____'| 
+|¯`·v·´|¯|¯`·v·´'| |¯`·v·´|\|'¯`v.´’|'‚|¯`·v·´| '\:'|'¯`·v´'||'¯`·v´|':/' |¯`·v·´|¯|¯`·v·´'| 
+|L,__'|  |'L,__‚| |L,__'| |L,__,|'‚|L,__‚|   '\|L,__'||L,__|/   |L,__'|  |'L,__‚| 
         NetHunter Kurulum Aracı ArivaKaliNetHunter v$SURUM
         By: @AtahanArslan | Channel: @ArivaTools
 EOF
@@ -139,24 +134,24 @@ function mimari_belirle() {
 function bilgileri_ayarla() {
     renkli_yaz "🛠️ Kurulum seçenekleri hazırlanıyor..." "$MAVI" "$SIFIRLA"
     if [[ $SISTEM_MIMARISI == "arm64" ]]; then
-        renkli_yaz "[1] NetHunter ARM64 (tam)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[2] NetHunter ARM64 (normal)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[3] NetHunter ARM64 (basit)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[1] NetHunter ARM64 (full)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[2] NetHunter ARM64 (minimal)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[3] NetHunter ARM64 (nano)" "$ACIK_MAVI" "$SIFIRLA"
     else
-        renkli_yaz "[1] NetHunter ARMhf (tam)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[2] NetHunter ARMhf (normal)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[3] NetHunter ARMhf (basit)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[1] NetHunter ARMhf (full)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[2] NetHunter ARMhf (minimal)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[3] NetHunter ARMhf (nano)" "$ACIK_MAVI" "$SIFIRLA"
     fi
     read -p "$(renkli_yaz "Seçiminiz (1-3): " "$SARI" "$SIFIRLA")" secilen_goruntu
     case "$secilen_goruntu" in
-        1) goruntu="tam" ;;
-        2) goruntu="normal" ;;
-        3) goruntu="basit" ;;
-        *) renkli_yaz "⚠️ Geçersiz seçim, 'tam' seçildi." "$SARI" "$SIFIRLA"; goruntu="tam" ;;
+        1) goruntu="full" ;;
+        2) goruntu="minimal" ;;
+        3) goruntu="nano" ;;
+        *) renkli_yaz "⚠️ Geçersiz seçim, 'full' seçildi." "$SARI" "$SIFIRLA"; goruntu="full" ;;
     esac
     CHROOT=kali-${SISTEM_MIMARISI}
-    GORUNTU_ADI=kali-nethunter-daily-dev-rootfs-${goruntu}-${SISTEM_MIMARISI}.tar.xz
-    SHA_ADI=${GORUNTU_ADI}.sha512sum
+    GORUNTU_ADI="nethunter-2024.3-kalifs-${goruntu}-${SISTEM_MIMARISI}.tar.xz"
+    SHA_ADI="${GORUNTU_ADI}.sha512sum"
     log_yaz "Seçilen görüntü: $goruntu"
 }
 
@@ -187,8 +182,12 @@ function temizlik_yap() {
 
 function bagimliliklari_kontrol_et() {
     renkli_yaz "🔧 Bağımlılıklar kontrol ediliyor..." "$MAVI" "$SIFIRLA"
-    apt-get update -y &>/dev/null || apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &>/dev/null
-    for paket in proot tar axel; do
+    apt-get update -y &>/dev/null || {
+        renkli_yaz "❌ Paket listesi güncellenemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: apt-get update başarısız."
+        exit 1
+    }
+    for paket in proot tar axel wget; do
         if ! command -v "$paket" >/dev/null 2>&1; then
             renkli_yaz "📦 $paket kuruluyor..." "$SARI" "$SIFIRLA"
             apt install -y "$paket" || {
@@ -208,6 +207,15 @@ function url_al() {
     SHA_URL="${TEMEL_URL}/${SHA_ADI}"
 }
 
+function url_kontrol() {
+    local url="$1"
+    if curl --head --silent --fail "$url" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 function kok_dosya_sistemini_indir() {
     if [ -f "$GORUNTU_ADI" ] && ! soru_sor "Mevcut dosya bulundu. Yeniden indirilsin mi?" "H"; then
         GORUNTU_SAKLA=1
@@ -215,11 +223,30 @@ function kok_dosya_sistemini_indir() {
     fi
     renkli_yaz "📥 Kök dosya sistemi indiriliyor..." "$MAVI" "$SIFIRLA"
     url_al
-    axel -n 4 "$KOK_URL" || {
-        renkli_yaz "❌ İndirme başarısız." "$KIRMIZI" "$SIFIRLA"
-        log_yaz "Hata: Kök dosya sistemi indirilemedi."
+    
+    # URL kontrolü
+    if ! url_kontrol "$KOK_URL"; then
+        renkli_yaz "❌ URL erişilemez: $KOK_URL" "$KIRMIZI" "$SIFIRLA"
+        renkli_yaz "ℹ️ İnternet bağlantınızı kontrol edin veya URL'nin geçerli olduğundan emin olun." "$SARI" "$SIFIRLA"
+        log_yaz "Hata: URL erişilemez - $KOK_URL"
         exit 1
-    }
+    fi
+
+    # Axel ile indirme (ilk deneme)
+    renkli_yaz "🔄 Axel ile indiriliyor..." "$ACIK_MAVI" "$SIFIRLA"
+    if axel -n 4 "$KOK_URL" 2>/dev/null; then
+        renkli_yaz "✅ İndirme tamamlandı (axel)." "$YESIL" "$SIFIRLA"
+    else
+        renkli_yaz "⚠️ Axel başarısız, wget ile deneniyor..." "$SARI" "$SIFIRLA"
+        if wget "$KOK_URL" -O "$GORUNTU_ADI" 2>/dev/null; then
+            renkli_yaz "✅ İndirme tamamlandı (wget)." "$YESIL" "$SIFIRLA"
+        else
+            renkli_yaz "❌ İndirme başarısız oldu." "$KIRMIZI" "$SIFIRLA"
+            renkli_yaz "ℹ️ İnternet bağlantınızı kontrol edin veya dosyayı manuel olarak indirin: $KOK_URL" "$SARI" "$SIFIRLA"
+            log_yaz "Hata: Kök dosya sistemi indirilemedi - $KOK_URL"
+            exit 1
+        fi
+    fi
     log_yaz "Kök dosya sistemi indirildi: $GORUNTU_ADI"
 }
 
@@ -245,7 +272,12 @@ function sha_al() {
         url_al
         [ -f "$SHA_ADI" ] && rm -f "$SHA_ADI"
         if sha_url_kontrol; then
-            axel -n 4 "$SHA_URL" && sha_dogrula
+            axel -n 4 "$SHA_URL" 2>/dev/null || wget "$SHA_URL" -O "$SHA_ADI" 2>/dev/null || {
+                renkli_yaz "⚠️ SHA dosyası indirilemedi, doğrulama atlanıyor." "$SARI" "$SIFIRLA"
+                log_yaz "Uyarı: SHA dosyası indirilemedi."
+                return
+            }
+            sha_dogrula
             log_yaz "SHA dosyası indirildi ve doğrulandı."
         else
             renkli_yaz "⚠️ SHA dosyası bulunamadı." "$SARI" "$SIFIRLA"
@@ -319,7 +351,7 @@ EOF
 }
 
 function kex_kontrol() {
-    if [ "$goruntu" = "nano" ] || [ "$goruntu" = "küçük" ]; then
+    if [ "$goruntu" = "nano" ] || [ "$goruntu" = "minimal" ]; then
         renkli_yaz "🖥️ KeX paketleri kuruluyor..." "$MAVI" "$SIFIRLA"
         nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce || log_yaz "Uyarı: KeX paketleri kurulamadı."
     fi

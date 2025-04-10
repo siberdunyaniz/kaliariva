@@ -1,468 +1,441 @@
-#!/data/data/com.termux/files/usr/bin/bash -e
-
-VERSION=2024091801
-BASE_URL=https://image-nethunter.kali.org/nethunter-fs/kali-daily
-USERNAME=kali
 
 
+SURUM=2024091801
+TEMEL_URL=https://image-nethunter.kali.org/nethunter-fs/kali-daily
+KULLANICI_ADI=kali
+LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
 
-function unsupported_arch() {
-    printf "${red}"
-    echo "[*] Unsupported Architecture\n\n"
-    printf "${reset}"
-    exit
+KIRMIZI='\033[1;31m'
+YESIL='\033[1;32m'
+SARI='\033[1;33m'
+MAVI='\033[1;34m'
+ACIK_MAVI='\033[1;96m'
+MOR='\033[1;95m'
+SIFIRLA='\033[0m'
+
+function log_yaz() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI"
 }
 
-function ask() {
-    # http://djm.me/ask
+function renkli_yaz() {
+    local text="$1"
+    local start_color="$2"
+    local end_color="$3"
+    echo -e "${start_color}${text}${end_color}"
+}
+
+function banner_yazdir() {
+    clear
+    local banner=$(cat <<- EOF
+         @@@@@@   @@@@@@@   @@@  @@@  @@@   @@@@@@   
+        @@@@@@@@  @@@@@@@@  @@@  @@@  @@@  @@@@@@@@  
+        @@!  @@@  @@!  @@@  @@!  @@!  @@@  @@!  @@@  
+        !@!  @!@  !@!  @!@  !@!  !@!  @!@  !@!  @!@  
+        @!@!@!@!  @!@!!@!   !!@  @!@  !@!  @!@!@!@!  
+        !!!@!!!!  !!@!@!    !!!  !@!  !!!  !!!@!!!!  
+        !!:  !!!  !!: :!!   !!:  :!:  !!:  !!:  !!!  
+        :!:  !:!  :!:  !:!  :!:   ::!!:!   :!:  !:!  
+        ::   :::  ::   :::   ::    ::::    ::   :::  
+         :   : :   :   : :  :       :       :   : :  
+        
+        NetHunter Kurulum Aracı ArivaKaliNetHunter v$SURUM
+        By: @AtahanArslan | Channel: @ArivaTools
+EOF
+    )
+    echo -e "$(renkli_yaz "$banner" "$KIRMIZI" "$SARI")" | while IFS= read -r line; do printf "%*s\n" $(( ( $(tput cols) + ${#line} ) / 2 )) "$line"; done
+}
+
+function baslangic_menu() {
+    banner_yazdir
+    renkli_yaz "🌟 Hoş Geldiniz! Lütfen bir seçenek seçin:" "$YESIL" "$SIFIRLA"
+    echo
+    renkli_yaz "[1] Yazılımı Çalıştır 🚀" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "[2] Yönetici ile İletişim 📧" "$MOR" "$SIFIRLA"
+    renkli_yaz "[3] Sosyal Medya Hesaplarımız 🌐" "$MAVI" "$SIFIRLA"
+    renkli_yaz "[4] Çıkış 🚪" "$KIRMIZI" "$SIFIRLA"
+    read -p "$(renkli_yaz "Seçiminiz (1-4): " "$SARI" "$SIFIRLA")" secim
+
+    case $secim in
+        1) sistem_kontrol && kurulum_baslat ;;
+        2) yonetici_iletisim ;;
+        3) sosyal_medya ;;
+        4) renkli_yaz "👋 Çıkış yapılıyor..." "$KIRMIZI" "$SIFIRLA"; log_yaz "Kullanıcı çıkış yaptı."; exit 0 ;;
+        *) renkli_yaz "❌ Geçersiz seçim!" "$KIRMIZI" "$SIFIRLA"; sleep 2; baslangic_menu ;;
+    esac
+}
+
+function yonetici_iletisim() {
+    clear
+    renkli_yaz "📧 Yönetici ile İletişim" "$MOR" "$SIFIRLA"
+    renkli_yaz "E-posta: siberdunyaniz@gmail.com" "$YESIL" "$SIFIRLA"
+    renkli_yaz "Telefon: " "$YESIL" "$SIFIRLA"
+    renkli_yaz "Geri dönmek için herhangi bir tuşa basın..." "$SARI" "$SIFIRLA"
+    read -n 1
+    baslangic_menu
+}
+
+function sosyal_medya() {
+    clear
+    renkli_yaz "🌐 Sosyal Medya Hesaplarımız" "$MAVI" "$SIFIRLA"
+    renkli_yaz "Twitter: @siberdunyanizR" "$YESIL" "$SIFIRLA"
+    renkli_yaz "GitHub: github.com/siberdunyaniz" "$YESIL" "$SIFIRLA"
+    renkli_yaz "Instagram: @SiberDunyaniz" "$YESIL" "$SIFIRLA"
+    renkli_yaz "Geri dönmek için herhangi bir tuşa basın..." "$SARI" "$SIFIRLA"
+    read -n 1
+    baslangic_menu
+}
+
+function sistem_kontrol() {
+    renkli_yaz "🔍 Sistem gereksinimleri kontrol ediliyor..." "$MAVI" "$SIFIRLA"
+    if ! command -v getprop >/dev/null 2>&1; then
+        renkli_yaz "❌ getprop komutu bulunamadı. Termux ortamı gerekli." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: getprop komutu eksik."
+        exit 1
+    fi
+    if [ "$(df -h "$HOME" | awk 'NR==2 {print $4}')" \< "5G" ]; then
+        renkli_yaz "❌ Yetersiz depolama alanı (minimum 5GB gerekli)." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Yetersiz depolama alanı."
+        exit 1
+    fi
+    renkli_yaz "✅ Sistem hazır." "$YESIL" "$SIFIRLA"
+}
+
+function desteklenmeyen_mimari() {
+    renkli_yaz "❌ Desteklenmeyen Mimari" "$KIRMIZI" "$SIFIRLA"
+    log_yaz "Hata: Desteklenmeyen mimari."
+    exit 1
+}
+
+function soru_sor() {
     while true; do
-
-        if [ "${2:-}" = "Y" ]; then
-            prompt="Y/n"
-            default=Y
-        elif [ "${2:-}" = "N" ]; then
-            prompt="y/N"
-            default=N
+        if [ "${2:-}" = "E" ]; then
+            istem="E/h"
+            varsayilan=E
         else
-            prompt="y/n"
-            default=
+            istem="e/H"
+            varsayilan=H
         fi
-
-        # Ask the question
-        printf "${light_cyan}\n[?] "
-        read -p "$1 [$prompt] " REPLY
-
-        # Default?
-        if [ -z "$REPLY" ]; then
-            REPLY=$default
-        fi
-
-        printf "${reset}"
-
-        # Check if the reply is valid
-        case "$REPLY" in
-            Y*|y*) return 0 ;;
-            N*|n*) return 1 ;;
+        printf "${ACIK_MAVI}[?] $1 [$istem] ${SIFIRLA}"
+        read -p "" CEVAP
+        [ -z "$CEVAP" ] && CEVAP=$varsayilan
+        case "$CEVAP" in
+            E*|e*) return 0 ;;
+            H*|h*) return 1 ;;
         esac
     done
 }
 
-function get_arch() {
-    printf "${blue}[*] Checking device architecture ..."
+function mimari_belirle() {
+    renkli_yaz "🔍 Cihaz mimarisi belirleniyor..." "$MAVI" "$SIFIRLA"
     case $(getprop ro.product.cpu.abi) in
-        arm64-v8a)
-            SYS_ARCH=arm64
-            ;;
-        armeabi|armeabi-v7a)
-            SYS_ARCH=armhf
-            ;;
-        *)
-            unsupported_arch
-            ;;
+        arm64-v8a) SISTEM_MIMARISI=arm64 ;;
+        armeabi|armeabi-v7a) SISTEM_MIMARISI=armhf ;;
+        *) desteklenmeyen_mimari ;;
     esac
+    renkli_yaz "✅ Mimari: $SISTEM_MIMARISI" "$YESIL" "$SIFIRLA"
+    log_yaz "Mimari belirlendi: $SISTEM_MIMARISI"
 }
 
-function set_strings() {
-    echo \
-    && echo "" 
-    ####
-    if [[ ${SYS_ARCH} == "arm64" ]];
-    then
-        echo "[1] NetHunter ARM64 (full)"
-        echo "[2] NetHunter ARM64 (minimal)"
-        echo "[3] NetHunter ARM64 (nano)"
-        read -p "Enter the image you want to install: " wimg
-        if (( $wimg == "1" ));
-        then
-            wimg="full"
-        elif (( $wimg == "2" ));
-        then
-            wimg="minimal"
-        elif (( $wimg == "3" ));
-        then
-            wimg="nano"
-        else
-            wimg="full"
+function bilgileri_ayarla() {
+    renkli_yaz "🛠️ Kurulum seçenekleri hazırlanıyor..." "$MAVI" "$SIFIRLA"
+    if [[ $SISTEM_MIMARISI == "arm64" ]]; then
+        renkli_yaz "[1] NetHunter ARM64 (tam)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[2] NetHunter ARM64 (normal)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[3] NetHunter ARM64 (basit)" "$ACIK_MAVI" "$SIFIRLA"
+    else
+        renkli_yaz "[1] NetHunter ARMhf (tam)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[2] NetHunter ARMhf (normal)" "$ACIK_MAVI" "$SIFIRLA"
+        renkli_yaz "[3] NetHunter ARMhf (basit)" "$ACIK_MAVI" "$SIFIRLA"
+    fi
+    read -p "$(renkli_yaz "Seçiminiz (1-3): " "$SARI" "$SIFIRLA")" secilen_goruntu
+    case "$secilen_goruntu" in
+        1) goruntu="tam" ;;
+        2) goruntu="normal" ;;
+        3) goruntu="basit" ;;
+        *) renkli_yaz "⚠️ Geçersiz seçim, 'tam' seçildi." "$SARI" "$SIFIRLA"; goruntu="tam" ;;
+    esac
+    CHROOT=kali-${SISTEM_MIMARISI}
+    GORUNTU_ADI=kali-nethunter-daily-dev-rootfs-${goruntu}-${SISTEM_MIMARISI}.tar.xz
+    SHA_ADI=${GORUNTU_ADI}.sha512sum
+    log_yaz "Seçilen görüntü: $goruntu"
+}
+
+function dosya_sistemini_hazirla() {
+    if [ -d "$CHROOT" ]; then
+        if soru_sor "Mevcut chroot bulundu. Yedeklemek ister misiniz?" "E"; then
+            yedek_ad="chroot_yedek_$(date +%Y%m%d_%H%M%S).tar.gz"
+            tar -czf "$yedek_ad" "$CHROOT" && renkli_yaz "✅ Yedek oluşturuldu: $yedek_ad" "$YESIL" "$SIFIRLA"
+            log_yaz "Chroot yedeklendi: $yedek_ad"
         fi
-    elif [[ ${SYS_ARCH} == "armhf" ]];
-    then
-        echo "[1] NetHunter ARMhf (full)"
-        echo "[2] NetHunter ARMhf (minimal)"
-        echo "[3] NetHunter ARMhf (nano)"
-        read -p "Enter the image you want to install: " wimg
-        if [[ "$wimg" == "1" ]]; then
-            wimg="full"
-        elif [[ "$wimg" == "2" ]]; then
-            wimg="minimal"
-        elif [[ "$wimg" == "3" ]]; then
-            wimg="nano"
+        if soru_sor "Mevcut chroot silinsin mi?" "H"; then
+            rm -rf "$CHROOT"
+            renkli_yaz "✅ Eski chroot silindi." "$YESIL" "$SIFIRLA"
+            log_yaz "Eski chroot silindi."
         else
-            wimg="full"
+            CHROOT_SAKLA=1
         fi
     fi
-    ####
+}
 
-
-    CHROOT=kali-${SYS_ARCH}
-    IMAGE_NAME=kali-nethunter-daily-dev-rootfs-${wimg}-${SYS_ARCH}.tar.xz
-    SHA_NAME=${IMAGE_NAME}.sha512sum
-}    
-
-function prepare_fs() {
-    unset KEEP_CHROOT
-    if [ -d ${CHROOT} ]; then
-        if ask "Existing rootfs directory found. Delete and create a new one?" "N"; then
-            rm -rf ${CHROOT}
-        else
-            KEEP_CHROOT=1
-        fi
+function temizlik_yap() {
+    if [ -f "$GORUNTU_ADI" ] && soru_sor "İndirilen dosyalar silinsin mi?" "H"; then
+        rm -f "$GORUNTU_ADI" "$SHA_ADI"
+        renkli_yaz "✅ Dosyalar temizlendi." "$YESIL" "$SIFIRLA"
+        log_yaz "İndirilen dosyalar silindi."
     fi
-} 
+}
 
-function cleanup() {
-    if [ -f "${IMAGE_NAME}" ]; then
-        if ask "Delete downloaded rootfs file?" "N"; then
-        if [ -f "${IMAGE_NAME}" ]; then
-                rm -f "${IMAGE_NAME}"
-        fi
-        if [ -f "${SHA_NAME}" ]; then
-                rm -f "${SHA_NAME}"
-        fi
-        fi
-    fi
-} 
-
-function check_dependencies() {
-    printf "${blue}\n[*] Checking package dependencies...${reset}\n"
-    ## Workaround for termux-app issue #1283 (https://github.com/termux/termux-app/issues/1283)
-    ##apt update -y &> /dev/null
-    apt-get update -y &> /dev/null || apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &> /dev/null
-
-    for i in proot tar axel; do
-        if [ -e "$PREFIX"/bin/$i ]; then
-            echo "  $i is OK"
-        else
-            printf "Installing ${i}...\n"
-            apt install -y $i || {
-                printf "${red}ERROR: Failed to install packages.\n Exiting.\n${reset}"
-            exit
+function bagimliliklari_kontrol_et() {
+    renkli_yaz "🔧 Bağımlılıklar kontrol ediliyor..." "$MAVI" "$SIFIRLA"
+    apt-get update -y &>/dev/null || apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &>/dev/null
+    for paket in proot tar axel; do
+        if ! command -v "$paket" >/dev/null 2>&1; then
+            renkli_yaz "📦 $paket kuruluyor..." "$SARI" "$SIFIRLA"
+            apt install -y "$paket" || {
+                renkli_yaz "❌ $paket kurulamadı." "$KIRMIZI" "$SIFIRLA"
+                log_yaz "Hata: $paket kurulamadı."
+                exit 1
             }
         fi
     done
-    apt upgrade -y
+    apt upgrade -y &>/dev/null
+    renkli_yaz "✅ Bağımlılıklar hazır." "$YESIL" "$SIFIRLA"
+    log_yaz "Bağımlılıklar kontrol edildi ve güncellendi."
 }
 
-
-function get_url() {
-    ROOTFS_URL="${BASE_URL}/${IMAGE_NAME}"
-    SHA_URL="${BASE_URL}/${SHA_NAME}"
+function url_al() {
+    KOK_URL="${TEMEL_URL}/${GORUNTU_ADI}"
+    SHA_URL="${TEMEL_URL}/${SHA_ADI}"
 }
 
-function get_rootfs() {
-    unset KEEP_IMAGE
-    if [ -f "${IMAGE_NAME}" ]; then
-        if ask "Existing image file found. Delete and download a new one?" "N"; then
-            rm -f "${IMAGE_NAME}"
+function kok_dosya_sistemini_indir() {
+    if [ -f "$GORUNTU_ADI" ] && ! soru_sor "Mevcut dosya bulundu. Yeniden indirilsin mi?" "H"; then
+        GORUNTU_SAKLA=1
+        return
+    fi
+    renkli_yaz "📥 Kök dosya sistemi indiriliyor..." "$MAVI" "$SIFIRLA"
+    url_al
+    axel -n 4 "$KOK_URL" || {
+        renkli_yaz "❌ İndirme başarısız." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Kök dosya sistemi indirilemedi."
+        exit 1
+    }
+    log_yaz "Kök dosya sistemi indirildi: $GORUNTU_ADI"
+}
+
+function sha_url_kontrol() {
+    curl --head --silent --fail "$SHA_URL" >/dev/null 2>&1
+}
+
+function sha_dogrula() {
+    if [ -z "$GORUNTU_SAKLA" ] && [ -f "$SHA_ADI" ]; then
+        renkli_yaz "🔍 Bütünlük kontrol ediliyor..." "$MAVI" "$SIFIRLA"
+        sha512sum -c "$SHA_ADI" || {
+            renkli_yaz "❌ Dosya bozuk." "$KIRMIZI" "$SIFIRLA"
+            log_yaz "Hata: Kök dosya sistemi bozuk."
+            exit 1
+        }
+        renkli_yaz "✅ Bütünlük doğrulandı." "$YESIL" "$SIFIRLA"
+    fi
+}
+
+function sha_al() {
+    if [ -z "$GORUNTU_SAKLA" ]; then
+        renkli_yaz "📥 SHA dosyası alınıyor..." "$MAVI" "$SIFIRLA"
+        url_al
+        [ -f "$SHA_ADI" ] && rm -f "$SHA_ADI"
+        if sha_url_kontrol; then
+            axel -n 4 "$SHA_URL" && sha_dogrula
+            log_yaz "SHA dosyası indirildi ve doğrulandı."
         else
-            printf "${yellow}[!] Using existing rootfs archive${reset}\n"
-            KEEP_IMAGE=1
-            return
+            renkli_yaz "⚠️ SHA dosyası bulunamadı." "$SARI" "$SIFIRLA"
+            log_yaz "Uyarı: SHA dosyası mevcut değil."
         fi
     fi
-    printf "${blue}[*] Downloading rootfs...${reset}\n\n"
-    get_url
-    wget --continue "${ROOTFS_URL}"
 }
 
-function check_sha_url() {
-    if ! curl --head --silent --fail "${SHA_URL}" > /dev/null; then
-        echo "[!] SHA_URL does not exist or is unreachable"
-        return 1
-    fi
-    return 0
-}
-
-function verify_sha() {
-    if [ -z $KEEP_IMAGE ]; then
-        printf "\n${blue}[*] Verifying integrity of rootfs...${reset}\n\n"
-        if [ -f "${SHA_NAME}" ]; then
-            sha512sum -c "$SHA_NAME" || {
-                printf "${red} Rootfs corrupted. Please run this installer again or download the file manually\n${reset}"
-                exit 1
-            }
-        else
-            echo "[!] SHA file not found. Skipping verification..."    
-        fi    
+function kok_dosya_sistemini_cikar() {
+    if [ -z "$CHROOT_SAKLA" ]; then
+        renkli_yaz "📤 Kök dosya sistemi çıkarılıyor..." "$MAVI" "$SIFIRLA"
+        proot --link2symlink tar -xf "$GORUNTU_ADI" 2>/dev/null || {
+            renkli_yaz "❌ Çıkarma başarısız." "$KIRMIZI" "$SIFIRLA"
+            log_yaz "Hata: Kök dosya sistemi çıkarılamadı."
+            exit 1
+        }
+        renkli_yaz "✅ Çıkarma tamamlandı." "$YESIL" "$SIFIRLA"
+        log_yaz "Kök dosya sistemi çıkarıldı."
     fi
 }
 
-function get_sha() {
-    if [ -z $KEEP_IMAGE ]; then
-        printf "\n${blue}[*] Getting SHA ... ${reset}\n\n"
-        get_url
-        if [ -f "${SHA_NAME}" ]; then
-            rm -f "${SHA_NAME}"
-        fi        
-        if check_sha_url; then
-            echo "[+] SHA_URL exists. Proceeding with download..."
-            wget --continue "${SHA_URL}"
-            verify_sha
-        else
-            echo "[!] SHA_URL does not exist. Skipping download."
-        fi
-    fi        
-}
-
-function extract_rootfs() {
-    if [ -z $KEEP_CHROOT ]; then
-        printf "\n${blue}[*] Extracting rootfs... ${reset}\n\n"
-        proot --link2symlink tar -xf "$IMAGE_NAME" 2> /dev/null || :
-    else        
-        printf "${yellow}[!] Using existing rootfs directory${reset}\n"
-    fi
-}
-
-
-function create_launcher() {
-    NH_LAUNCHER=${PREFIX}/bin/nethunter
-    NH_SHORTCUT=${PREFIX}/bin/nh
-    cat > "$NH_LAUNCHER" <<- EOF
+function baslatici_olustur() {
+    NH_BASlATICI=${PREFIX}/bin/nethunter
+    NH_KISAYOL=${PREFIX}/bin/nh
+    cat > "$NH_BASlATICI" <<- EOF
 #!/data/data/com.termux/files/usr/bin/bash -e
 cd \${HOME}
-## termux-exec sets LD_PRELOAD so let's unset it before continuing
 unset LD_PRELOAD
-## Workaround for Libreoffice, also needs to bind a fake /proc/version
-if [ ! -f $CHROOT/root/.version ]; then
-    touch $CHROOT/root/.version
-fi
+[ ! -f $CHROOT/root/.version ] && touch $CHROOT/root/.version
 
-## Default user is "kali"
-user="$USERNAME"
-home="/home/\$user"
-start="sudo -u kali /bin/bash"
+kullanici="$KULLANICI_ADI"
+ev="/home/\$kullanici"
+baslat="sudo -u kali /bin/bash"
 
-## NH can be launched as root with the "-r" cmd attribute
-## Also check if user kali exists, if not start as root
 if grep -q "kali" ${CHROOT}/etc/passwd; then
-    KALIUSR="1";
+    KALI_KULLANICI="1"
 else
-    KALIUSR="0";
+    KALI_KULLANICI="0"
 fi
-if [[ \$KALIUSR == "0" || ("\$#" != "0" && ("\$1" == "-r" || "\$1" == "-R")) ]];then
-    user="root"
-    home="/\$user"
-    start="/bin/bash --login"
-    if [[ "\$#" != "0" && ("\$1" == "-r" || "\$1" == "-R") ]];then
-        shift
-    fi
+if [[ \$KALI_KULLANICI == "0" || ("\$#" != "0" && ("\$1" == "-r" || "\$1" == "-R")) ]]; then
+    kullanici="root"
+    ev="/\$kullanici"
+    baslat="/bin/bash --login"
+    [ "\$#" != "0" ] && [[ "\$1" == "-r" || "\$1" == "-R" ]] && shift
 fi
 
-cmdline="proot \\
+komut="proot \\
         --link2symlink \\
         -0 \\
         -r $CHROOT \\
         -b /dev \\
         -b /proc \\
         -b /sdcard \\
-        -b $CHROOT\$home:/dev/shm \\
-        -w \$home \\
+        -b $CHROOT\$ev:/dev/shm \\
+        -w \$ev \\
            /usr/bin/env -i \\
-           HOME=\$home \\
+           HOME=\$ev \\
            PATH=/usr/local/sbin:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin \\
            TERM=\$TERM \\
            LANG=C.UTF-8 \\
-           \$start"
+           \$baslat"
 
-cmd="\$@"
-if [ "\$#" == "0" ];then
-    exec \$cmdline
-else
-    \$cmdline -c "\$cmd"
-fi
+komut_gir="\$@"
+[ "\$#" == "0" ] && exec \$komut || \$komut -c "\$komut_gir"
 EOF
 
-    chmod 700 "$NH_LAUNCHER"
-    if [ -L "${NH_SHORTCUT}" ]; then
-        rm -f "${NH_SHORTCUT}"
-    fi
-    if [ ! -f "${NH_SHORTCUT}" ]; then
-        ln -s "${NH_LAUNCHER}" "${NH_SHORTCUT}" >/dev/null
-    fi
-   
+    chmod 700 "$NH_BASlATICI"
+    [ -L "$NH_KISAYOL" ] && rm -f "$NH_KISAYOL"
+    [ ! -f "$NH_KISAYOL" ] && ln -s "$NH_BASlATICI" "$NH_KISAYOL" >/dev/null
+    log_yaz "NetHunter başlatıcısı oluşturuldu."
 }
 
-function check_kex() {
-    if [ "$wimg" = "nano" ] || [ "$wimg" = "minimal" ]; then
-        nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce
+function kex_kontrol() {
+    if [ "$goruntu" = "nano" ] || [ "$goruntu" = "küçük" ]; then
+        renkli_yaz "🖥️ KeX paketleri kuruluyor..." "$MAVI" "$SIFIRLA"
+        nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce || log_yaz "Uyarı: KeX paketleri kurulamadı."
     fi
 }
-function create_kex_launcher() {
-    KEX_LAUNCHER=${CHROOT}/usr/bin/kex
-    cat > $KEX_LAUNCHER <<- EOF
+
+function kex_baslatici_olustur() {
+    KEX_BASlATICI=${CHROOT}/usr/bin/kex
+    cat > "$KEX_BASlATICI" <<- EOF
 #!/bin/bash
 
-function start-kex() {
-    if [ ! -f ~/.vnc/passwd ]; then
-        passwd-kex
-    fi
-    USR=\$(whoami)
-    if [ \$USR == "root" ]; then
-        SCREEN=":2"
-    else
-        SCREEN=":1"
-    fi 
-    export MOZ_FAKE_NO_SANDBOX=1; export HOME=\${HOME}; export USER=\${USR}; LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgcc_s.so.1 nohup vncserver \$SCREEN >/dev/null 2>&1 </dev/null
-    starting_kex=1
-    return 0
+function kex_baslat() {
+    [ ! -f ~/.vnc/passwd ] && kex_sifre
+    KULLANICI=\$(whoami)
+    [ \$KULLANICI == "root" ] && EKRAN=":2" || EKRAN=":1"
+    export MOZ_FAKE_NO_SANDBOX=1 HOME=\${HOME} USER=\${KULLANICI}
+    LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgcc_s.so.1 nohup vncserver \$EKRAN >/dev/null 2>&1 </dev/null
+    kex_basliyor=1
 }
 
-function stop-kex() {
+function kex_durdur() {
     vncserver -kill :1 | sed s/"Xtigervnc"/"NetHunter KeX"/
     vncserver -kill :2 | sed s/"Xtigervnc"/"NetHunter KeX"/
-    return $?
 }
 
-function passwd-kex() {
+function kex_sifre() {
     vncpasswd
-    return $?
 }
 
-function status-kex() {
-    sessions=\$(vncserver -list | sed s/"TigerVNC"/"NetHunter KeX"/)
-    if [[ \$sessions == *"590"* ]]; then
-        printf "\n\${sessions}\n"
-        printf "\nYou can use the KeX client to connect to any of these displays.\n\n"
-    else
-        if [ ! -z \$starting_kex ]; then
-            printf '\nError starting the KeX server.\nPlease try "nethunter kex kill" or restart your termux session and try again.\n\n'
-        fi
+function kex_durum() {
+    oturumlar=\$(vncserver -list | sed s/"TigerVNC"/"NetHunter KeX"/)
+    if [[ \$oturumlar == *"590"* ]]; then
+        printf "\n\${oturumlar}\n\nKeX istemcisini kullanarak bağlanabilirsiniz.\n"
+    elif [ ! -z \$kex_basliyor ]; then
+        printf '\nKeX sunucusu başlatılamadı.\n"nethunter kex kill" ile deneyin veya Termux\'u yeniden başlatın.\n'
     fi
-    return 0
 }
 
-function kill-kex() {
+function kex_oldur() {
     pkill Xtigervnc
-    return \$?
 }
 
 case \$1 in
-    start)
-        start-kex
-        ;;
-    stop)
-        stop-kex
-        ;;
-    status)
-        status-kex
-        ;;
-    passwd)
-        passwd-kex
-        ;;
-    kill)
-        kill-kex
-        ;;
-    *)
-        stop-kex
-        start-kex
-        status-kex
-        ;;
+    start) kex_baslat ;;
+    stop) kex_durdur ;;
+    status) kex_durum ;;
+    passwd) kex_sifre ;;
+    kill) kex_oldur ;;
+    *) kex_durdur; kex_baslat; kex_durum ;;
 esac
 EOF
 
-    chmod 700 $KEX_LAUNCHER
+    chmod 700 "$KEX_BASlATICI"
+    log_yaz "KeX başlatıcısı oluşturuldu."
 }
 
-function fix_profile_bash() {
-    ## Prevent attempt to create links in read only filesystem
-    if [ -f ${CHROOT}/root/.bash_profile ]; then
-        sed -i '/if/,/fi/d' "${CHROOT}/root/.bash_profile"
-    fi
+function bash_profil_duzelt() {
+    [ -f "$CHROOT/root/.bash_profile" ] && sed -i '/if/,/fi/d' "$CHROOT/root/.bash_profile"
+    log_yaz "Bash profili düzeltildi."
 }
 
-function fix_resolv_conf() {
-    ## We don't have systemd so let's use static entries for Quad9 DNS servers
-    echo "nameserver 9.9.9.9" > $CHROOT/etc/resolv.conf
-    echo "nameserver 149.112.112.112" >> $CHROOT/etc/resolv.conf
+function resolv_conf_duzelt() {
+    echo -e "nameserver 9.9.9.9\nnameserver 149.112.112.112" > "$CHROOT/etc/resolv.conf"
+    log_yaz "DNS ayarları yapılandırıldı."
 }
 
-function fix_sudo() {
-    ## fix sudo & su on start
-    chmod +s $CHROOT/usr/bin/sudo
-    chmod +s $CHROOT/usr/bin/su
-    echo "kali    ALL=(ALL:ALL) ALL" > $CHROOT/etc/sudoers.d/kali
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1773148
-    echo "Set disable_coredump false" > $CHROOT/etc/sudo.conf
+function sudo_duzelt() {
+    chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su"
+    echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT/etc/sudoers.d/kali"
+    echo "Set disable_coredump false" > "$CHROOT/etc/sudo.conf"
+    log_yaz "Sudo ayarları yapılandırıldı."
 }
 
-function fix_uid() {
-    ## Change kali uid and gid to match that of the termux user
-    USRID=$(id -u)
-    GRPID=$(id -g)
-    nh -r usermod -u "$USRID" kali 2>/dev/null
-    nh -r groupmod -g "$GRPID" kali 2>/dev/null
+function uid_duzelt() {
+    KULLANICI_ID=$(id -u)
+    GRUP_ID=$(id -g)
+    nh -r usermod -u "$KULLANICI_ID" kali 2>/dev/null
+    nh -r groupmod -g "$GRUP_ID" kali 2>/dev/null
+    log_yaz "Kullanıcı ID düzeltildi."
 }
 
-function print_banner() {
-    clear
-    printf "${blue}##################################################\n"
-    printf "${blue}##                                              ##\n"
-    printf "${blue}##  88      a8P         db        88        88  ##\n"
-    printf "${blue}##  88    .88'         d88b       88        88  ##\n"
-    printf "${blue}##  88   88'          d8''8b      88        88  ##\n"
-    printf "${blue}##  88 d88           d8'  '8b     88        88  ##\n"
-    printf "${blue}##  8888'88.        d8YaaaaY8b    88        88  ##\n"
-    printf "${blue}##  88P   Y8b      d8''''''''8b   88        88  ##\n"
-    printf "${blue}##  88     '88.   d8'        '8b  88        88  ##\n"
-    printf "${blue}##  88       Y8b d8'          '8b 888888888 88  ##\n"
-    printf "${blue}##                                              ##\n"
-    printf "${blue}####  ############# NetHunter ####################${reset}\n\n"
+function kurulum_baslat() {
+    cd "$HOME" || {
+        renkli_yaz "❌ Ev dizinine erişilemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Ev dizinine erişilemedi."
+        exit 1
+    }
+    banner_yazdir
+    mimari_belirle
+    bilgileri_ayarla
+    dosya_sistemini_hazirla
+    bagimliliklari_kontrol_et
+    kok_dosya_sistemini_indir
+    sha_al
+    kok_dosya_sistemini_cikar
+    baslatici_olustur
+    temizlik_yap
+
+    renkli_yaz "🛠️ Yapılandırma başlatılıyor..." "$MAVI" "$SIFIRLA"
+    bash_profil_duzelt
+    resolv_conf_duzelt
+    sudo_duzelt
+    kex_kontrol
+    kex_baslatici_olustur
+    uid_duzelt
+
+    banner_yazdir
+    renkli_yaz "🎉 Kurulum Tamamlandı - $(date '+%Y-%m-%d %H:%M:%S')" "$YESIL" "$SIFIRLA"
+    renkli_yaz "📌 Kullanım Komutları:" "$YESIL" "$SIFIRLA"
+    renkli_yaz "  nethunter            # Komut satırı" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "  nethunter kex passwd # KeX şifresi" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "  nethunter kex &      # Grafik arayüz" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "  nethunter kex stop   # Grafik arayüzü durdur" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "  nethunter -r         # Root modu" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "  nh                   # Kısayol" "$ACIK_MAVI" "$SIFIRLA"
+    renkli_yaz "📜 Log dosyası: $LOG_DOSYASI" "$SARI" "$SIFIRLA"
+    log_yaz "Kurulum başarıyla tamamlandı."
 }
 
-
-##################################
-##              Main            ##
-
-# Add some colours
-red='\033[1;31m'
-green='\033[1;32m'
-yellow='\033[1;33m'
-blue='\033[1;34m'
-light_cyan='\033[1;96m'
-reset='\033[0m'
-
-cd "$HOME"
-print_banner
-get_arch
-set_strings
-prepare_fs
-check_dependencies
-get_rootfs
-get_sha
-extract_rootfs
-create_launcher
-cleanup
-
-printf "\n${blue}[*] Configuring NetHunter for Termux ...\n"
-fix_profile_bash
-fix_resolv_conf
-fix_sudo
-check_kex
-create_kex_launcher
-fix_uid
-
-print_banner
-printf "${green}[=] Kali NetHunter for Termux installed successfully${reset}\n\n"
-printf "${green}[+] To start Kali NetHunter, type:${reset}\n"
-printf "${green}[+] nethunter             # To start NetHunter CLI${reset}\n"
-printf "${green}[+] nethunter kex passwd  # To set the KeX password${reset}\n"
-printf "${green}[+] nethunter kex &       # To start NetHunter GUI${reset}\n"
-printf "${green}[+] nethunter kex stop    # To stop NetHunter GUI${reset}\n"
-#printf "${green}[+] nethunter kex <command> # Run command in NetHunter env${reset}\n"
-printf "${green}[+] nethunter -r          # To run NetHunter as root${reset}\n"
-#printf "${green}[+] nethunter -r kex passwd  # To set the KeX password for root${reset}\n"
-#printf "${green}[+] nethunter kex &       # To start NetHunter GUI as root${reset}\n"
-#printf "${green}[+] nethunter kex stop    # To stop NetHunter GUI root session${reset}\n"
-#printf "${green}[+] nethunter -r kex kill # To stop all NetHunter GUI sessions${reset}\n"
-#printf "${green}[+] nethunter -r kex <command> # Run command in NetHunter env as root${reset}\n"
-printf "${green}[+] nh                    # Shortcut for nethunter${reset}\n\n"
+baslangic_menu

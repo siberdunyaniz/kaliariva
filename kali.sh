@@ -4,6 +4,7 @@ SURUM=2024091801
 TEMEL_URL="https://images.kali.org/nethunter"
 KULLANICI_ADI=kali
 LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
+LOGO_LINES=10  # Logonun satır sayısı (wrapper'da kullanılacak)
 
 KIRMIZI='\033[1;31m'
 YESIL='\033[1;32m'
@@ -13,35 +14,17 @@ ACIK_MAVI='\033[1;96m'
 MOR='\033[1;95m'
 SIFIRLA='\033[0m'
 
-function log_yaz() {
+renkli_yaz() {
+    tput cup $((LOGO_LINES + 1)) 0
+    echo -e "${2}${1}${3}"
+    tput cup $((LOGO_LINES + 2)) 0
+}
+
+log_yaz() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI"
 }
 
-function renkli_yaz() {
-    local text="$1"
-    local start_color="$2"
-    local end_color="$3"
-    echo -e "${start_color}${text}${end_color}"
-}
-
-function banner_yazdir() {
-    clear
-    local banner=$(cat <<- EOF
-'/¯¯¯¯/\¯¯¯¯\‚ |¯¯¯¯|\¯¯¯¯\‚ |¯¯¯¯| |¯¯¯¯'|    '|¯¯¯¯'| '/¯¯¯¯/\¯¯¯¯\‚ 
-|:·.·.·:|_|:·.·.·:'| |:·.·.·:|/____/| |¯¯¯¯| |:·.·.·:'|    '|:·.·.·:'| |:·.·.·:|_|:·.·.·:'| 
-|:·.·.·:|¯|:·.·.·:'| |:·.·.·:|\¯¯¯¯\| |:·.·.·:| |\:·.·.·:\   /:·.·.·:/| |:·.·.·:|¯|:·.·.·:'| 
-|____|:‚|____'| |____|·|____|'‚|____| |:'\____\/____/':| |____|:‚|____'| 
-|¯`·v·´|¯|¯`·v·´'| |¯`·v·´|\|'¯`v.´’|'‚|¯`·v·´| '\:'|'¯`·v´'||'¯`·v´|':/' |¯`·v·´|¯|¯`·v·´'| 
-|L,__'|  |'L,__‚| |L,__'| |L,__,|'‚|L,__‚|   '\|L,__'||L,__|/   |L,__'|  |'L,__‚| 
-        NetHunter Kurulum Aracı ArivaKaliNetHunter v$SURUM
-        By: @AtahanArslan | Channel: @ArivaTools
-EOF
-    )
-    echo -e "$(renkli_yaz "$banner" "$KIRMIZI" "$SARI")" | while IFS= read -r line; do printf "%*s\n" $(( ( $(tput cols) + ${#line} ) / 2 )) "$line"; done
-}
-
-function baslangic_menu() {
-    banner_yazdir
+baslangic_menu() {
     renkli_yaz "🌟 Hoş Geldiniz! Lütfen bir seçenek seçin:" "$YESIL" "$SIFIRLA"
     echo
     renkli_yaz "[1] Yazılımı Çalıştır 🚀" "$ACIK_MAVI" "$SIFIRLA"
@@ -59,8 +42,7 @@ function baslangic_menu() {
     esac
 }
 
-function yonetici_iletisim() {
-    clear
+yonetici_iletisim() {
     renkli_yaz "📧 Yönetici ile İletişim" "$MOR" "$SIFIRLA"
     renkli_yaz "E-posta: siberdunyaniz@gmail.com" "$YESIL" "$SIFIRLA"
     renkli_yaz "Telefon: " "$YESIL" "$SIFIRLA"
@@ -69,8 +51,7 @@ function yonetici_iletisim() {
     baslangic_menu
 }
 
-function sosyal_medya() {
-    clear
+sosyal_medya() {
     renkli_yaz "🌐 Sosyal Medya Hesaplarımız" "$MAVI" "$SIFIRLA"
     renkli_yaz "Twitter: @siberdunyanizR" "$YESIL" "$SIFIRLA"
     renkli_yaz "GitHub: github.com/siberdunyaniz" "$YESIL" "$SIFIRLA"
@@ -80,7 +61,7 @@ function sosyal_medya() {
     baslangic_menu
 }
 
-function sistem_kontrol() {
+sistem_kontrol() {
     renkli_yaz "🔍 Sistem gereksinimleri kontrol ediliyor..." "$MAVI" "$SIFIRLA"
     if ! command -v getprop >/dev/null 2>&1; then
         renkli_yaz "❌ getprop komutu bulunamadı. Termux ortamı gerekli." "$KIRMIZI" "$SIFIRLA"
@@ -95,13 +76,13 @@ function sistem_kontrol() {
     renkli_yaz "✅ Sistem hazır." "$YESIL" "$SIFIRLA"
 }
 
-function desteklenmeyen_mimari() {
+desteklenmeyen_mimari() {
     renkli_yaz "❌ Desteklenmeyen Mimari" "$KIRMIZI" "$SIFIRLA"
     log_yaz "Hata: Desteklenmeyen mimari."
     exit 1
 }
 
-function soru_sor() {
+soru_sor() {
     while true; do
         if [ "${2:-}" = "E" ]; then
             istem="E/h"
@@ -120,7 +101,7 @@ function soru_sor() {
     done
 }
 
-function mimari_belirle() {
+mimari_belirle() {
     renkli_yaz "🔍 Cihaz mimarisi belirleniyor..." "$MAVI" "$SIFIRLA"
     case $(getprop ro.product.cpu.abi) in
         arm64-v8a) SISTEM_MIMARISI=arm64 ;;
@@ -131,7 +112,7 @@ function mimari_belirle() {
     log_yaz "Mimari belirlendi: $SISTEM_MIMARISI"
 }
 
-function bilgileri_ayarla() {
+bilgileri_ayarla() {
     renkli_yaz "🛠️ Kurulum seçenekleri hazırlanıyor..." "$MAVI" "$SIFIRLA"
     if [[ $SISTEM_MIMARISI == "arm64" ]]; then
         renkli_yaz "[1] NetHunter ARM64 (full)" "$ACIK_MAVI" "$SIFIRLA"
@@ -155,7 +136,7 @@ function bilgileri_ayarla() {
     log_yaz "Seçilen görüntü: $goruntu"
 }
 
-function dosya_sistemini_hazirla() {
+dosya_sistemini_hazirla() {
     if [ -d "$CHROOT" ]; then
         if soru_sor "Mevcut chroot bulundu. Yedeklemek ister misiniz?" "E"; then
             yedek_ad="chroot_yedek_$(date +%Y%m%d_%H%M%S).tar.gz"
@@ -172,7 +153,7 @@ function dosya_sistemini_hazirla() {
     fi
 }
 
-function temizlik_yap() {
+temizlik_yap() {
     if [ -f "$GORUNTU_ADI" ] && soru_sor "İndirilen dosyalar silinsin mi?" "H"; then
         rm -f "$GORUNTU_ADI" "$SHA_ADI"
         renkli_yaz "✅ Dosyalar temizlendi." "$YESIL" "$SIFIRLA"
@@ -180,7 +161,7 @@ function temizlik_yap() {
     fi
 }
 
-function bagimliliklari_kontrol_et() {
+bagimliliklari_kontrol_et() {
     renkli_yaz "🔧 Bağımlılıklar kontrol ediliyor..." "$MAVI" "$SIFIRLA"
     apt-get update -y &>/dev/null || {
         renkli_yaz "❌ Paket listesi güncellenemedi." "$KIRMIZI" "$SIFIRLA"
@@ -202,12 +183,12 @@ function bagimliliklari_kontrol_et() {
     log_yaz "Bağımlılıklar kontrol edildi ve güncellendi."
 }
 
-function url_al() {
+url_al() {
     KOK_URL="${TEMEL_URL}/${GORUNTU_ADI}"
     SHA_URL="${TEMEL_URL}/${SHA_ADI}"
 }
 
-function url_kontrol() {
+url_kontrol() {
     local url="$1"
     if curl --head --silent --fail "$url" >/dev/null 2>&1; then
         return 0
@@ -216,7 +197,7 @@ function url_kontrol() {
     fi
 }
 
-function kok_dosya_sistemini_indir() {
+kok_dosya_sistemini_indir() {
     if [ -f "$GORUNTU_ADI" ] && ! soru_sor "Mevcut dosya bulundu. Yeniden indirilsin mi?" "H"; then
         GORUNTU_SAKLA=1
         return
@@ -224,15 +205,12 @@ function kok_dosya_sistemini_indir() {
     renkli_yaz "📥 Kök dosya sistemi indiriliyor..." "$MAVI" "$SIFIRLA"
     url_al
     
-    # URL kontrolü
     if ! url_kontrol "$KOK_URL"; then
         renkli_yaz "❌ URL erişilemez: $KOK_URL" "$KIRMIZI" "$SIFIRLA"
-        renkli_yaz "ℹ️ İnternet bağlantınızı kontrol edin veya URL'nin geçerli olduğundan emin olun." "$SARI" "$SIFIRLA"
         log_yaz "Hata: URL erişilemez - $KOK_URL"
         exit 1
     fi
 
-    # Axel ile indirme (ilk deneme)
     renkli_yaz "🔄 Axel ile indiriliyor..." "$ACIK_MAVI" "$SIFIRLA"
     if axel -n 4 "$KOK_URL" 2>/dev/null; then
         renkli_yaz "✅ İndirme tamamlandı (axel)." "$YESIL" "$SIFIRLA"
@@ -241,8 +219,7 @@ function kok_dosya_sistemini_indir() {
         if wget "$KOK_URL" -O "$GORUNTU_ADI" 2>/dev/null; then
             renkli_yaz "✅ İndirme tamamlandı (wget)." "$YESIL" "$SIFIRLA"
         else
-            renkli_yaz "❌ İndirme başarısız oldu." "$KIRMIZI" "$SIFIRLA"
-            renkli_yaz "ℹ️ İnternet bağlantınızı kontrol edin veya dosyayı manuel olarak indirin: $KOK_URL" "$SARI" "$SIFIRLA"
+            renkli_yaz "❌ İndirme başarısız oldu. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SIFIRLA"
             log_yaz "Hata: Kök dosya sistemi indirilemedi - $KOK_URL"
             exit 1
         fi
@@ -250,11 +227,11 @@ function kok_dosya_sistemini_indir() {
     log_yaz "Kök dosya sistemi indirildi: $GORUNTU_ADI"
 }
 
-function sha_url_kontrol() {
+sha_url_kontrol() {
     curl --head --silent --fail "$SHA_URL" >/dev/null 2>&1
 }
 
-function sha_dogrula() {
+sha_dogrula() {
     if [ -z "$GORUNTU_SAKLA" ] && [ -f "$SHA_ADI" ]; then
         renkli_yaz "🔍 Bütünlük kontrol ediliyor..." "$MAVI" "$SIFIRLA"
         sha512sum -c "$SHA_ADI" || {
@@ -266,7 +243,7 @@ function sha_dogrula() {
     fi
 }
 
-function sha_al() {
+sha_al() {
     if [ -z "$GORUNTU_SAKLA" ]; then
         renkli_yaz "📥 SHA dosyası alınıyor..." "$MAVI" "$SIFIRLA"
         url_al
@@ -286,7 +263,7 @@ function sha_al() {
     fi
 }
 
-function kok_dosya_sistemini_cikar() {
+kok_dosya_sistemini_cikar() {
     if [ -z "$CHROOT_SAKLA" ]; then
         renkli_yaz "📤 Kök dosya sistemi çıkarılıyor..." "$MAVI" "$SIFIRLA"
         proot --link2symlink tar -xf "$GORUNTU_ADI" 2>/dev/null || {
@@ -299,7 +276,7 @@ function kok_dosya_sistemini_cikar() {
     fi
 }
 
-function baslatici_olustur() {
+baslatici_olustur() {
     NH_BASlATICI=${PREFIX}/bin/nethunter
     NH_KISAYOL=${PREFIX}/bin/nh
     cat > "$NH_BASlATICI" <<- EOF
@@ -350,14 +327,14 @@ EOF
     log_yaz "NetHunter başlatıcısı oluşturuldu."
 }
 
-function kex_kontrol() {
+kex_kontrol() {
     if [ "$goruntu" = "nano" ] || [ "$goruntu" = "minimal" ]; then
         renkli_yaz "🖥️ KeX paketleri kuruluyor..." "$MAVI" "$SIFIRLA"
         nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce || log_yaz "Uyarı: KeX paketleri kurulamadı."
     fi
 }
 
-function kex_baslatici_olustur() {
+kex_baslatici_olustur() {
     KEX_BASlATICI=${CHROOT}/usr/bin/kex
     cat > "$KEX_BASlATICI" <<- EOF
 #!/bin/bash
@@ -407,24 +384,24 @@ EOF
     log_yaz "KeX başlatıcısı oluşturuldu."
 }
 
-function bash_profil_duzelt() {
+bash_profil_duzelt() {
     [ -f "$CHROOT/root/.bash_profile" ] && sed -i '/if/,/fi/d' "$CHROOT/root/.bash_profile"
     log_yaz "Bash profili düzeltildi."
 }
 
-function resolv_conf_duzelt() {
+resolv_conf_duzelt() {
     echo -e "nameserver 9.9.9.9\nnameserver 149.112.112.112" > "$CHROOT/etc/resolv.conf"
     log_yaz "DNS ayarları yapılandırıldı."
 }
 
-function sudo_duzelt() {
+sudo_duzelt() {
     chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su"
     echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT/etc/sudoers.d/kali"
     echo "Set disable_coredump false" > "$CHROOT/etc/sudo.conf"
     log_yaz "Sudo ayarları yapılandırıldı."
 }
 
-function uid_duzelt() {
+uid_duzelt() {
     KULLANICI_ID=$(id -u)
     GRUP_ID=$(id -g)
     nh -r usermod -u "$KULLANICI_ID" kali 2>/dev/null
@@ -432,13 +409,12 @@ function uid_duzelt() {
     log_yaz "Kullanıcı ID düzeltildi."
 }
 
-function kurulum_baslat() {
+kurulum_baslat() {
     cd "$HOME" || {
         renkli_yaz "❌ Ev dizinine erişilemedi." "$KIRMIZI" "$SIFIRLA"
         log_yaz "Hata: Ev dizinine erişilemedi."
         exit 1
     }
-    banner_yazdir
     mimari_belirle
     bilgileri_ayarla
     dosya_sistemini_hazirla
@@ -457,7 +433,6 @@ function kurulum_baslat() {
     kex_baslatici_olustur
     uid_duzelt
 
-    banner_yazdir
     renkli_yaz "🎉 Kurulum Tamamlandı - $(date '+%Y-%m-%d %H:%M:%S')" "$YESIL" "$SIFIRLA"
     renkli_yaz "📌 Kullanım Komutları:" "$YESIL" "$SIFIRLA"
     renkli_yaz "  nethunter            # Komut satırı" "$ACIK_MAVI" "$SIFIRLA"

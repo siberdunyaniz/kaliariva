@@ -10,7 +10,6 @@ RESET="\e[0m"
 KALI_PATH="$HOME/kali-fs"
 LOG_FILE="$HOME/kali_core.log"
 ROOTFS_URL="https://kali.download/kali-images/kali-2023.3/kali-linux-2023.3-rootfs-arm64.tar.xz"
-ROOTFS_CHECKSUM="e8b1f2c3d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3"  # Örnek checksum, gerçek değeri kontrol edin
 
 LOGO="KaliCore\nElite Penetration Testing Framework"
 
@@ -48,36 +47,34 @@ spinner() {
     printf "\r${GREEN}[✓] %s${RESET}\n" "$1"
 }
 
-verify_checksum() {
-    local file="$1"
-    local expected="$2"
-    local actual=$(sha256sum "$file" | awk '{print $1}')
-    if [ "$actual" != "$expected" ]; then
-        echo -e "${RED}[!] Checksum uyuşmazlığı: $file${RESET}"
-        log_message "Checksum hatası: $actual != $expected"
-        exit 1
-    fi
-    log_message "Checksum doğrulandı: $actual"
-}
-
 setup_kali() {
     if [ ! -d "$KALI_PATH" ]; then
         render_full_logo
         echo -e "${GREEN}[*] Kali Linux ortamı hazırlanıyor...${RESET}"
         log_message "Kali kurulum süreci başlatıldı"
 
-        pkg update -y &>/dev/null && pkg install proot wget tar -y &>/dev/null & spinner "Bağımlılıklar yükleniyor"
+        if ! pkg update -y &>/dev/null || ! pkg install proot wget tar -y &>/dev/null & spinner "Bağımlılıklar yükleniyor"; then
+            echo -e "${RED}[!] Bağımlılıklar yüklenirken hata oluştu.${RESET}"
+            log_message "Hata: Bağımlılıklar yüklenemedi"
+            exit 1
+        fi
+
         mkdir -p "$KALI_PATH"
+        render_full_logo
+        if ! wget -q "$ROOTFS_URL" -O kali.tar.xz &>/dev/null & spinner "Kali rootfs indiriliyor"; then
+            echo -e "${RED}[!] Rootfs indirilirken hata oluştu. İnternet bağlantısını kontrol edin.${RESET}"
+            log_message "Hata: Rootfs indirme başarısız"
+            exit 1
+        fi
 
         render_full_logo
-        wget -q "$ROOTFS_URL" -O kali.tar.xz &>/dev/null & spinner "Kali rootfs indiriliyor"
-        verify_checksum "kali.tar.xz" "$ROOTFS_CHECKSUM"
-
-        render_full_logo
-        tar -xJf kali.tar.xz -C "$KALI_PATH" &>/dev/null & spinner "Rootfs ayıklanıyor"
+        if ! tar -xJf kali.tar.xz -C "$KALI_PATH" &>/dev/null & spinner "Rootfs ayıklanıyor"; then
+            echo -e "${RED}[!] Rootfs ayıklanırken hata oluştu.${RESET}"
+            log_message "Hata: Rootfs ayıklama başarısız"
+            exit 1
+        fi
         rm kali.tar.xz
 
-        # Kali yapılandırması
         echo "nameserver 8.8.8.8" > "$KALI_PATH/etc/resolv.conf"
         echo "kali-linux" > "$KALI_PATH/etc/hostname"
         chmod 644 "$KALI_PATH/etc/resolv.conf"
@@ -96,7 +93,11 @@ launch_kali() {
     render_full_logo
     echo -e "${CYAN}[*] Kali Linux başlatılıyor...${RESET}"
     log_message "Kali shell başlatıldı"
-    proot -0 -w ~ -r "$KALI_PATH" /bin/bash --init-file <(echo "PS1='${GREEN}root@kali-linux:${CYAN}/root${GREEN}\$ ${RESET}'")
+    if ! proot -0 -w ~ -r "$KALI_PATH" /bin/bash --init-file <(echo "PS1='${GREEN}root@kali-linux:${CYAN}/root${GREEN}\$ ${RESET}'"); then
+        echo -e "${RED}[!] Kali shell başlatılamadı.${RESET}"
+        log_message "Hata: Shell başlatma başarısız"
+        exit 1
+    fi
 }
 
 main() {
@@ -107,7 +108,7 @@ main() {
 
 trap 'echo -e "${YELLOW}\n[*] Çıkış yapıldı.${RESET}"; log_message "Kullanıcı tarafından çıkış yapıldı"; exit 0' INT
 main || {
-    echo -e "${RED}[!] Hata oluştu.${RESET}"
-    log_message "Hata: Kurulum veya çalıştırma başarısız"
+    echo -e "${RED}[!] Çalıştırma sırasında hata oluştu.${RESET}"
+    log_message "Hata: Genel çalıştırma başarısız"
     exit 1
 }

@@ -47,29 +47,42 @@ spinner() {
     printf "\r${GREEN}[✓] %s${RESET}\n" "$1"
 }
 
+check_requirements() {
+    render_full_logo
+    echo -e "${GREEN}[*] Gereksinimler kontrol ediliyor...${RESET}"
+    if ! command -v proot &>/dev/null || ! command -v wget &>/dev/null || ! command -v tar &>/dev/null; then
+        echo -e "${GREEN}[*] Eksik paketler yükleniyor...${RESET}"
+        pkg update -y &>/dev/null && pkg install proot wget tar -y &>/dev/null & spinner "Bağımlılıklar yükleniyor" || {
+            echo -e "${RED}[!] Bağımlılıklar yüklenemedi. Depoları kontrol edin.${RESET}"
+            log_message "Hata: Bağımlılıklar yüklenemedi"
+            exit 1
+        }
+    fi
+    if [ $(df -m "$HOME" | awk 'NR==2 {print $4}') -lt 1000 ]; then
+        echo -e "${RED}[!] Yeterli depolama alanı yok (min 1GB gereklidir).${RESET}"
+        log_message "Hata: Yetersiz depolama alanı"
+        exit 1
+    fi
+}
+
 setup_kali() {
-    if [ ! -d "$KALI_PATH" ]; then
+    check_requirements
+    if [ ! -d "$KALI_PATH" ] || [ ! -f "$KALI_PATH/bin/bash" ]; then
         render_full_logo
         echo -e "${GREEN}[*] Kali Linux ortamı hazırlanıyor...${RESET}"
         log_message "Kali kurulum süreci başlatıldı"
 
-        if ! pkg update -y &>/dev/null || ! pkg install proot wget tar -y &>/dev/null & spinner "Bağımlılıklar yükleniyor"; then
-            echo -e "${RED}[!] Bağımlılıklar yüklenirken hata oluştu.${RESET}"
-            log_message "Hata: Bağımlılıklar yüklenemedi"
-            exit 1
-        fi
-
         mkdir -p "$KALI_PATH"
         render_full_logo
         if ! wget -q "$ROOTFS_URL" -O kali.tar.xz &>/dev/null & spinner "Kali rootfs indiriliyor"; then
-            echo -e "${RED}[!] Rootfs indirilirken hata oluştu. İnternet bağlantısını kontrol edin.${RESET}"
+            echo -e "${RED}[!] Rootfs indirilemedi. İnternet bağlantınızı kontrol edin.${RESET}"
             log_message "Hata: Rootfs indirme başarısız"
             exit 1
         fi
 
         render_full_logo
         if ! tar -xJf kali.tar.xz -C "$KALI_PATH" &>/dev/null & spinner "Rootfs ayıklanıyor"; then
-            echo -e "${RED}[!] Rootfs ayıklanırken hata oluştu.${RESET}"
+            echo -e "${RED}[!] Rootfs ayıklama başarısız. Dosya bozulmuş olabilir.${RESET}"
             log_message "Hata: Rootfs ayıklama başarısız"
             exit 1
         fi
@@ -77,7 +90,7 @@ setup_kali() {
 
         echo "nameserver 8.8.8.8" > "$KALI_PATH/etc/resolv.conf"
         echo "kali-linux" > "$KALI_PATH/etc/hostname"
-        chmod 644 "$KALI_PATH/etc/resolv.conf"
+        chmod -R 755 "$KALI_PATH"
 
         log_message "Kali ortamı başarıyla kuruldu"
         render_full_logo
@@ -92,11 +105,21 @@ setup_kali() {
 launch_kali() {
     render_full_logo
     echo -e "${CYAN}[*] Kali Linux başlatılıyor...${RESET}"
-    log_message "Kali shell başlatıldı"
-    if ! proot -0 -w ~ -r "$KALI_PATH" /bin/bash --init-file <(echo "PS1='${GREEN}root@kali-linux:${CYAN}/root${GREEN}\$ ${RESET}'"); then
-        echo -e "${RED}[!] Kali shell başlatılamadı.${RESET}"
-        log_message "Hata: Shell başlatma başarısız"
+    log_message "Kali shell başlatma denemesi"
+    if [ ! -f "$KALI_PATH/bin/bash" ]; then
+        echo -e "${RED}[!] Bash bulunamadı. Kali rootfs bozulmuş olabilir.${RESET}"
+        log_message "Hata: /bin/bash eksik"
         exit 1
+    fi
+    if ! proot -0 -w ~ -r "$KALI_PATH" /bin/bash --init-file <(echo "PS1='${GREEN}root@kali-linux:${CYAN}/root${GREEN}\$ ${RESET}'"); then
+        echo -e "${RED}[!] Shell başlatılamadı. Proot veya rootfs ile ilgili bir sorun var.${RESET}"
+        log_message "Hata: Shell başlatma başarısız"
+        echo -e "${YELLOW}[*] Alternatif shell deneniyor...${RESET}"
+        proot -0 -w ~ -r "$KALI_PATH" /bin/sh || {
+            echo -e "${RED}[!] Alternatif shell de başarısız. Rootfs'yi yeniden kurmayı deneyin.${RESET}"
+            log_message "Hata: Alternatif shell başarısız"
+            exit 1
+        }
     fi
 }
 
@@ -108,7 +131,7 @@ main() {
 
 trap 'echo -e "${YELLOW}\n[*] Çıkış yapıldı.${RESET}"; log_message "Kullanıcı tarafından çıkış yapıldı"; exit 0' INT
 main || {
-    echo -e "${RED}[!] Çalıştırma sırasında hata oluştu.${RESET}"
+    echo -e "${RED}[!] Genel çalıştırma hatası.${RESET}"
     log_message "Hata: Genel çalıştırma başarısız"
     exit 1
 }

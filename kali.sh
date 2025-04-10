@@ -4,7 +4,7 @@ SURUM=2024091801
 TEMEL_URL="https://images.kali.org/nethunter"
 KULLANICI_ADI=kali
 LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
-LOGO_LINES=10  # Logonun satır sayısı (wrapper'da kullanılacak)
+LOGO_LINES=6  # Yeni logonun satır sayısı
 
 KIRMIZI='\033[1;31m'
 YESIL='\033[1;32m'
@@ -13,6 +13,17 @@ MAVI='\033[1;34m'
 ACIK_MAVI='\033[1;96m'
 MOR='\033[1;95m'
 SIFIRLA='\033[0m'
+
+# Yeni logo
+LOGO=$(cat <<- EOF
+   db    88""Yb 88 Yb    dP    db    
+  dPYb   88__dP 88  Yb  dP    dPYb   
+ dP__Yb  88"Yb  88   YbdP    dP__Yb  
+dP""""Yb 88  Yb 88    YP    dP""""Yb
+        NetHunter Kurulum Aracı v$SURUM
+        By: @AtahanArslan | @ArivaTools
+EOF
+)
 
 renkli_yaz() {
     tput cup $((LOGO_LINES + 1)) 0
@@ -23,6 +34,11 @@ renkli_yaz() {
 log_yaz() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI"
 }
+
+# Ekranı hazırla
+clear
+tput cup 0 0
+echo -e "$(renkli_yaz "$LOGO" "$KIRMIZI" "$SARI")" | while IFS= read -r line; do printf "%*s\n" $(( ( $(tput cols) + ${#line} ) / 2 )) "$line"; done
 
 baslangic_menu() {
     renkli_yaz "🌟 Hoş Geldiniz! Lütfen bir seçenek seçin:" "$YESIL" "$SIFIRLA"

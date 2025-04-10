@@ -4,7 +4,7 @@ SURUM=2024091801
 TEMEL_URL="https://images.kali.org/nethunter"
 KULLANICI_ADI=kali
 LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
-LOGO_LINES=6  # Yeni logonun satır sayısı
+LOGO_LINES=6  # Logonun satır sayısı
 
 KIRMIZI='\033[1;31m'
 YESIL='\033[1;32m'
@@ -14,20 +14,32 @@ ACIK_MAVI='\033[1;96m'
 MOR='\033[1;95m'
 SIFIRLA='\033[0m'
 
-# Yeni logo
+# Yeni logo (düzgün hizalanmış ve hatasız)
 LOGO=$(cat <<- EOF
    db    88""Yb 88 Yb    dP    db    
   dPYb   88__dP 88  Yb  dP    dPYb   
  dP__Yb  88"Yb  88   YbdP    dP__Yb  
 dP""""Yb 88  Yb 88    YP    dP""""Yb
-        NetHunter Kurulum Aracı v$SURUM
-        By: @AtahanArslan | @ArivaTools
+NetHunter Kurulum Aracı v$SURUM
+By: @AtahanArslan | @ArivaTools
 EOF
 )
 
+# Ekranı temizle ve logo için sabit alan ayır
+ekran_hazirla() {
+    clear
+    tput cup 0 0
+    while IFS= read -r line; do
+        printf "%*s\n" $(( ( $(tput cols) + ${#line} ) / 2 )) "$line"
+    done <<< "$(echo -e "${KIRMIZI}${LOGO}${SARI}")"
+}
+
 renkli_yaz() {
+    local mesaj="$1"
+    local renk="$2"
+    local sifirla="$3"
     tput cup $((LOGO_LINES + 1)) 0
-    echo -e "${2}${1}${3}"
+    echo -e "${renk}${mesaj}${sifirla}"
     tput cup $((LOGO_LINES + 2)) 0
 }
 
@@ -35,10 +47,8 @@ log_yaz() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI"
 }
 
-# Ekranı hazırla
-clear
-tput cup 0 0
-echo -e "$(renkli_yaz "$LOGO" "$KIRMIZI" "$SARI")" | while IFS= read -r line; do printf "%*s\n" $(( ( $(tput cols) + ${#line} ) / 2 )) "$line"; done
+# İlk ekran hazırlığı
+ekran_hazirla
 
 baslangic_menu() {
     renkli_yaz "🌟 Hoş Geldiniz! Lütfen bir seçenek seçin:" "$YESIL" "$SIFIRLA"
@@ -54,30 +64,35 @@ baslangic_menu() {
         2) yonetici_iletisim ;;
         3) sosyal_medya ;;
         4) renkli_yaz "👋 Çıkış yapılıyor..." "$KIRMIZI" "$SIFIRLA"; log_yaz "Kullanıcı çıkış yaptı."; exit 0 ;;
-        *) renkli_yaz "❌ Geçersiz seçim!" "$KIRMIZI" "$SIFIRLA"; sleep 2; baslangic_menu ;;
+        *) ekran_hazirla; renkli_yaz "❌ Geçersiz seçim!" "$KIRMIZI" "$SIFIRLA"; sleep 2; baslangic_menu ;;
     esac
 }
 
 yonetici_iletisim() {
+    ekran_hazirla
     renkli_yaz "📧 Yönetici ile İletişim" "$MOR" "$SIFIRLA"
     renkli_yaz "E-posta: siberdunyaniz@gmail.com" "$YESIL" "$SIFIRLA"
     renkli_yaz "Telefon: " "$YESIL" "$SIFIRLA"
     renkli_yaz "Geri dönmek için herhangi bir tuşa basın..." "$SARI" "$SIFIRLA"
     read -n 1
+    ekran_hazirla
     baslangic_menu
 }
 
 sosyal_medya() {
+    ekran_hazirla
     renkli_yaz "🌐 Sosyal Medya Hesaplarımız" "$MAVI" "$SIFIRLA"
     renkli_yaz "Twitter: @siberdunyanizR" "$YESIL" "$SIFIRLA"
     renkli_yaz "GitHub: github.com/siberdunyaniz" "$YESIL" "$SIFIRLA"
     renkli_yaz "Instagram: @SiberDunyaniz" "$YESIL" "$SIFIRLA"
     renkli_yaz "Geri dönmek için herhangi bir tuşa basın..." "$SARI" "$SIFIRLA"
     read -n 1
+    ekran_hazirla
     baslangic_menu
 }
 
 sistem_kontrol() {
+    ekran_hazirla
     renkli_yaz "🔍 Sistem gereksinimleri kontrol ediliyor..." "$MAVI" "$SIFIRLA"
     if ! command -v getprop >/dev/null 2>&1; then
         renkli_yaz "❌ getprop komutu bulunamadı. Termux ortamı gerekli." "$KIRMIZI" "$SIFIRLA"
@@ -93,24 +108,28 @@ sistem_kontrol() {
 }
 
 desteklenmeyen_mimari() {
+    ekran_hazirla
     renkli_yaz "❌ Desteklenmeyen Mimari" "$KIRMIZI" "$SIFIRLA"
     log_yaz "Hata: Desteklenmeyen mimari."
     exit 1
 }
 
 soru_sor() {
+    local soru="$1"
+    local varsayilan="${2:-H}"
+    local istem cevap
+    if [ "$varsayilan" = "E" ]; then
+        istem="E/h"
+        varsayilan="E"
+    else
+        istem="e/H"
+        varsayilan="H"
+    fi
     while true; do
-        if [ "${2:-}" = "E" ]; then
-            istem="E/h"
-            varsayilan=E
-        else
-            istem="e/H"
-            varsayilan=H
-        fi
-        printf "${ACIK_MAVI}[?] $1 [$istem] ${SIFIRLA}"
-        read -p "" CEVAP
-        [ -z "$CEVAP" ] && CEVAP=$varsayilan
-        case "$CEVAP" in
+        printf "${ACIK_MAVI}[?] $soru [$istem] ${SIFIRLA}"
+        read -p "" cevap
+        [ -z "$cevap" ] && cevap="$varsayilan"
+        case "$cevap" in
             E*|e*) return 0 ;;
             H*|h*) return 1 ;;
         esac
@@ -118,6 +137,7 @@ soru_sor() {
 }
 
 mimari_belirle() {
+    ekran_hazirla
     renkli_yaz "🔍 Cihaz mimarisi belirleniyor..." "$MAVI" "$SIFIRLA"
     case $(getprop ro.product.cpu.abi) in
         arm64-v8a) SISTEM_MIMARISI=arm64 ;;
@@ -129,6 +149,7 @@ mimari_belirle() {
 }
 
 bilgileri_ayarla() {
+    ekran_hazirla
     renkli_yaz "🛠️ Kurulum seçenekleri hazırlanıyor..." "$MAVI" "$SIFIRLA"
     if [[ $SISTEM_MIMARISI == "arm64" ]]; then
         renkli_yaz "[1] NetHunter ARM64 (full)" "$ACIK_MAVI" "$SIFIRLA"
@@ -144,7 +165,7 @@ bilgileri_ayarla() {
         1) goruntu="full" ;;
         2) goruntu="minimal" ;;
         3) goruntu="nano" ;;
-        *) renkli_yaz "⚠️ Geçersiz seçim, 'full' seçildi." "$SARI" "$SIFIRLA"; goruntu="full" ;;
+        *) ekran_hazirla; renkli_yaz "⚠️ Geçersiz seçim, 'full' seçildi." "$SARI" "$SIFIRLA"; goruntu="full" ;;
     esac
     CHROOT=kali-${SISTEM_MIMARISI}
     GORUNTU_ADI="nethunter-2024.3-kalifs-${goruntu}-${SISTEM_MIMARISI}.tar.xz"
@@ -178,6 +199,7 @@ temizlik_yap() {
 }
 
 bagimliliklari_kontrol_et() {
+    ekran_hazirla
     renkli_yaz "🔧 Bağımlılıklar kontrol ediliyor..." "$MAVI" "$SIFIRLA"
     apt-get update -y &>/dev/null || {
         renkli_yaz "❌ Paket listesi güncellenemedi." "$KIRMIZI" "$SIFIRLA"
@@ -218,6 +240,7 @@ kok_dosya_sistemini_indir() {
         GORUNTU_SAKLA=1
         return
     fi
+    ekran_hazirla
     renkli_yaz "📥 Kök dosya sistemi indiriliyor..." "$MAVI" "$SIFIRLA"
     url_al
     
@@ -249,6 +272,7 @@ sha_url_kontrol() {
 
 sha_dogrula() {
     if [ -z "$GORUNTU_SAKLA" ] && [ -f "$SHA_ADI" ]; then
+        ekran_hazirla
         renkli_yaz "🔍 Bütünlük kontrol ediliyor..." "$MAVI" "$SIFIRLA"
         sha512sum -c "$SHA_ADI" || {
             renkli_yaz "❌ Dosya bozuk." "$KIRMIZI" "$SIFIRLA"
@@ -261,6 +285,7 @@ sha_dogrula() {
 
 sha_al() {
     if [ -z "$GORUNTU_SAKLA" ]; then
+        ekran_hazirla
         renkli_yaz "📥 SHA dosyası alınıyor..." "$MAVI" "$SIFIRLA"
         url_al
         [ -f "$SHA_ADI" ] && rm -f "$SHA_ADI"
@@ -281,6 +306,7 @@ sha_al() {
 
 kok_dosya_sistemini_cikar() {
     if [ -z "$CHROOT_SAKLA" ]; then
+        ekran_hazirla
         renkli_yaz "📤 Kök dosya sistemi çıkarılıyor..." "$MAVI" "$SIFIRLA"
         proot --link2symlink tar -xf "$GORUNTU_ADI" 2>/dev/null || {
             renkli_yaz "❌ Çıkarma başarısız." "$KIRMIZI" "$SIFIRLA"
@@ -293,8 +319,8 @@ kok_dosya_sistemini_cikar() {
 }
 
 baslatici_olustur() {
-    NH_BASlATICI=${PREFIX}/bin/nethunter
-    NH_KISAYOL=${PREFIX}/bin/nh
+    NH_BASlATICI=${PREFIX:-/data/data/com.termux/files/usr}/bin/nethunter
+    NH_KISAYOL=${PREFIX:-/data/data/com.termux/files/usr}/bin/nh
     cat > "$NH_BASlATICI" <<- EOF
 #!/data/data/com.termux/files/usr/bin/bash -e
 cd \${HOME}
@@ -305,7 +331,7 @@ kullanici="$KULLANICI_ADI"
 ev="/home/\$kullanici"
 baslat="sudo -u kali /bin/bash"
 
-if grep -q "kali" ${CHROOT}/etc/passwd; then
+if grep -q "kali" ${CHROOT}/etc/passwd 2>/dev/null; then
     KALI_KULLANICI="1"
 else
     KALI_KULLANICI="0"
@@ -345,6 +371,7 @@ EOF
 
 kex_kontrol() {
     if [ "$goruntu" = "nano" ] || [ "$goruntu" = "minimal" ]; then
+        ekran_hazirla
         renkli_yaz "🖥️ KeX paketleri kuruluyor..." "$MAVI" "$SIFIRLA"
         nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce || log_yaz "Uyarı: KeX paketleri kurulamadı."
     fi
@@ -365,8 +392,8 @@ function kex_baslat() {
 }
 
 function kex_durdur() {
-    vncserver -kill :1 | sed s/"Xtigervnc"/"NetHunter KeX"/
-    vncserver -kill :2 | sed s/"Xtigervnc"/"NetHunter KeX"/
+    vncserver -kill :1 2>/dev/null | sed s/"Xtigervnc"/"NetHunter KeX"/
+    vncserver -kill :2 2>/dev/null | sed s/"Xtigervnc"/"NetHunter KeX"/
 }
 
 function kex_sifre() {
@@ -374,7 +401,7 @@ function kex_sifre() {
 }
 
 function kex_durum() {
-    oturumlar=\$(vncserver -list | sed s/"TigerVNC"/"NetHunter KeX"/)
+    oturumlar=\$(vncserver -list 2>/dev/null | sed s/"TigerVNC"/"NetHunter KeX"/)
     if [[ \$oturumlar == *"590"* ]]; then
         printf "\n\${oturumlar}\n\nKeX istemcisini kullanarak bağlanabilirsiniz.\n"
     elif [ ! -z \$kex_basliyor ]; then
@@ -383,7 +410,7 @@ function kex_durum() {
 }
 
 function kex_oldur() {
-    pkill Xtigervnc
+    pkill Xtigervnc 2>/dev/null
 }
 
 case \$1 in
@@ -411,7 +438,7 @@ resolv_conf_duzelt() {
 }
 
 sudo_duzelt() {
-    chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su"
+    chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su" 2>/dev/null
     echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT/etc/sudoers.d/kali"
     echo "Set disable_coredump false" > "$CHROOT/etc/sudo.conf"
     log_yaz "Sudo ayarları yapılandırıldı."
@@ -427,6 +454,7 @@ uid_duzelt() {
 
 kurulum_baslat() {
     cd "$HOME" || {
+        ekran_hazirla
         renkli_yaz "❌ Ev dizinine erişilemedi." "$KIRMIZI" "$SIFIRLA"
         log_yaz "Hata: Ev dizinine erişilemedi."
         exit 1
@@ -441,6 +469,7 @@ kurulum_baslat() {
     baslatici_olustur
     temizlik_yap
 
+    ekran_hazirla
     renkli_yaz "🛠️ Yapılandırma başlatılıyor..." "$MAVI" "$SIFIRLA"
     bash_profil_duzelt
     resolv_conf_duzelt
@@ -449,6 +478,7 @@ kurulum_baslat() {
     kex_baslatici_olustur
     uid_duzelt
 
+    ekran_hazirla
     renkli_yaz "🎉 Kurulum Tamamlandı - $(date '+%Y-%m-%d %H:%M:%S')" "$YESIL" "$SIFIRLA"
     renkli_yaz "📌 Kullanım Komutları:" "$YESIL" "$SIFIRLA"
     renkli_yaz "  nethunter            # Komut satırı" "$ACIK_MAVI" "$SIFIRLA"

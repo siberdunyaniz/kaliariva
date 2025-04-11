@@ -255,6 +255,7 @@ function cleanup() {
 
 function check_dependencies() {
     ekran_hazirla
+    renkli_yaz "📦 Bağımlılıklar kontrol ediliyor..." "$MAVI" "$YESIL"
     if ! apt-get update -y &>/dev/null; then
         apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &>/dev/null || {
             renkli_yaz "❌ Hata: Paket listesi güncellenemedi." "$KIRMIZI" "$SARI"
@@ -262,7 +263,7 @@ function check_dependencies() {
             exit 1
         }
     fi
-    for i in proot tar axel wget curl ping; do
+    for i in proot tar wget; do
         if ! command -v "$i" >/dev/null 2>&1; then
             apt install -y "$i" &>/dev/null || {
                 renkli_yaz "❌ Hata: $i kurulamadı." "$KIRMIZI" "$SARI"
@@ -271,11 +272,6 @@ function check_dependencies() {
             }
         fi
     done
-    apt upgrade -y &>/dev/null || {
-        renkli_yaz "❌ Hata: Sistem güncellenemedi." "$KIRMIZI" "$SARI"
-        log_yaz "Hata: apt upgrade başarısız."
-        exit 1
-    }
     log_yaz "Bağımlılıklar kontrol edildi ve güncellendi."
 }
 
@@ -285,6 +281,7 @@ function get_url() {
 }
 
 function get_rootfs() {
+    ekran_hazirla
     unset KEEP_IMAGE
     if [ -f "$IMAGE_NAME" ]; then
         if ask "Mevcut görüntü dosyası bulundu. Silip yenisini indirmek ister misiniz?" "N"; then
@@ -299,50 +296,28 @@ function get_rootfs() {
             return
         fi
     fi
-    ekran_hazirla
+
     get_url
     check_internet
     renkli_yaz "📥 Rootfs indiriliyor: $IMAGE_NAME" "$MAVI" "$YESIL"
-    if command -v axel >/dev/null 2>&1; then
-        if ! axel -n 4 -a "$ROOTFS_URL" -o "$IMAGE_NAME"; then
-            renkli_yaz "⚠️ Axel ile indirme başarısız, wget deneniyor..." "$SARI" "$KIRMIZI"
-            if ! wget --progress=bar:force "$ROOTFS_URL" -O "$IMAGE_NAME"; then
-                renkli_yaz "❌ Hata: İndirme başarısız. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SARI"
-                log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
-                exit 1
-            fi
-        fi
-    else
-        if ! wget --progress=bar:force "$ROOTFS_URL" -O "$IMAGE_NAME"; then
-            renkli_yaz "❌ Hata: İndirme başarısız. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SARI"
-            log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
-            exit 1
-        fi
+    
+    # GitLab scriptinden örnek alınan indirme sistemi
+    wget -O "$IMAGE_NAME" "$ROOTFS_URL" --progress=bar:force 2>&1 | tee -a "$LOG_DOSYASI"
+    if [ $? -ne 0 ] || [ ! -f "$IMAGE_NAME" ]; then
+        renkli_yaz "❌ Hata: Rootfs indirilemedi. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SARI"
+        log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
+        exit 1
     fi
-    [ ! -f "$IMAGE_NAME" ] && {
-        renkli_yaz "❌ Hata: Rootfs dosyası indirilemedi." "$KIRMIZI" "$SARI"
-        log_yaz "Hata: Rootfs dosyası indirilemedi."
+    
+    # Dosya izinlerini ayarlama (GitLab scriptinden örnek)
+    chmod 644 "$IMAGE_NAME" 2>/dev/null || {
+        renkli_yaz "❌ Hata: Dosya izinleri ayarlanamadı." "$KIRMIZI" "$SARI"
+        log_yaz "Hata: $IMAGE_NAME izinleri ayarlanamadı."
         exit 1
     }
+    
     renkli_yaz "✅ Rootfs başarıyla indirildi." "$YESIL" "$MAVI"
     log_yaz "Kök dosya sistemi indirildi: $IMAGE_NAME"
-}
-
-function check_sha_url() {
-    curl --head --silent --fail "$SHA_URL" >/dev/null 2>&1
-}
-
-function verify_sha() {
-    if [ -z "$KEEP_IMAGE" ] && [ -f "$SHA_NAME" ]; then
-        ekran_hazirla
-        renkli_yaz "🔍 Rootfs doğrulanıyor..." "$MAVI" "$YESIL"
-        if ! sha512sum -c "$SHA_NAME"; then
-            renkli_yaz "❌ Hata: Rootfs bozuk. Lütfen tekrar deneyin." "$KIRMIZI" "$SARI"
-            log_yaz "Hata: Rootfs bozuk."
-            exit 1
-        fi
-        renkli_yaz "✅ Rootfs doğrulandı." "$YESIL" "$MAVI"
-    fi
 }
 
 function get_sha() {
@@ -356,17 +331,32 @@ function get_sha() {
                 exit 1
             }
         fi
-        if check_sha_url; then
-            renkli_yaz "📥 SHA dosyası indiriliyor..." "$MAVI" "$YESIL"
-            if ! axel -n 4 -a "$SHA_URL" -o "$SHA_NAME" && ! wget --progress=bar:force "$SHA_URL" -O "$SHA_NAME"; then
-                log_yaz "Uyarı: SHA dosyası indirilemedi."
-            else
-                verify_sha
-                log_yaz "SHA dosyası indirildi ve doğrulandı."
-            fi
+        renkli_yaz "📥 SHA dosyası indiriliyor..." "$MAVI" "$YESIL"
+        wget -O "$SHA_NAME" "$SHA_URL" --progress=bar:force 2>&1 | tee -a "$LOG_DOSYASI"
+        if [ $? -eq 0 ] && [ -f "$SHA_NAME" ]; then
+            chmod 644 "$SHA_NAME" 2>/dev/null || {
+                renkli_yaz "❌ Hata: SHA dosyası izinleri ayarlanamadı." "$KIRMIZI" "$SARI"
+                log_yaz "Hata: $SHA_NAME izinleri ayarlanamadı."
+                exit 1
+            }
+            log_yaz "SHA dosyası indirildi."
         else
-            log_yaz "Uyarı: SHA dosyası mevcut değil."
+            log_yaz "Uyarı: SHA dosyası indirilemedi veya mevcut değil."
         fi
+    fi
+}
+
+function verify_sha() {
+    if [ -z "$KEEP_IMAGE" ] && [ -f "$SHA_NAME" ]; then
+        ekran_hazirla
+        renkli_yaz "🔍 Rootfs doğrulanıyor..." "$MAVI" "$YESIL"
+        if ! sha512sum -c "$SHA_NAME" 2>/dev/null; then
+            renkli_yaz "❌ Hata: Rootfs bozuk. Lütfen tekrar deneyin." "$KIRMIZI" "$SARI"
+            log_yaz "Hata: Rootfs bozuk."
+            exit 1
+        fi
+        renkli_yaz "✅ Rootfs doğrulandı." "$YESIL" "$MAVI"
+        log_yaz "Rootfs doğrulandı."
     fi
 }
 
@@ -394,17 +384,13 @@ function extract_rootfs() {
             log_yaz "Hata: $HOME dizinine yazma izni yok."
             exit 1
         fi
-        chmod -R u+w "$HOME" 2>/dev/null || {
-            renkli_yaz "⚠️ Uyarı: $HOME izinleri düzeltilemedi, ancak devam ediliyor." "$SARI" "$KIRMIZI"
-            log_yaz "Uyarı: $HOME izinleri düzeltilemedi."
-        }
         
-        # Çıkarma işlemi (ayrıntılı hata mesajı ile)
-        if ! tar -xvf "$IMAGE_NAME" -C "$HOME"; then
-            renkli_yaz "❌ Hata: Çıkarma başarısız. Dosya bozuk olabilir veya izin eksik. Detaylar logda." "$KIRMIZI" "$SARI"
+        # Çıkarma işlemi (GitLab scriptinden sadeleştirilmiş)
+        tar -xvf "$IMAGE_NAME" -C "$HOME" || {
+            renkli_yaz "❌ Hata: Çıkarma başarısız. Dosya bozuk olabilir veya izin eksik." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs çıkarılamadı - tar komutu başarısız."
             exit 1
-        fi
+        }
         
         # Çıkarma sonrası kontrol
         [ ! -d "$CHROOT" ] && {
@@ -619,6 +605,7 @@ set_strings
 prepare_fs
 get_rootfs
 get_sha
+verify_sha
 extract_rootfs
 create_launcher
 cleanup

@@ -7,20 +7,20 @@ LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
 LOGO_LINES=9
 
 # Renk kodları
-KIRMIZI='\033[1;31m'      # Red
-YESIL='\033[1;32m'        # Green
-SARI='\033[1;33m'         # Yellow
-MAVI='\033[1;34m'         # Blue
-MOR='\033[1;35m'          # Magenta
-CYAN='\033[1;36m'         # Cyan
-BEYAZ='\033[1;37m'        # White
-SIFIRLA='\033[0m'         # Reset
-KIRMIZI_ACIK='\033[91m'   # Bright Red
-YESIL_ACIK='\033[92m'     # Bright Green
-SARI_ACIK='\033[93m'      # Bright Yellow
-MAVI_ACIK='\033[94m'      # Bright Blue
-MOR_ACIK='\033[95m'       # Bright Magenta
-CYAN_ACIK='\033[96m'      # Bright Cyan
+KIRMIZI='\033[1;31m'
+YESIL='\033[1;32m'
+SARI='\033[1;33m'
+MAVI='\033[1;34m'
+MOR='\033[1;35m'
+CYAN='\033[1;36m'
+BEYAZ='\033[1;37m'
+SIFIRLA='\033[0m'
+KIRMIZI_ACIK='\033[91m'
+YESIL_ACIK='\033[92m'
+SARI_ACIK='\033[93m'
+MAVI_ACIK='\033[94m'
+MOR_ACIK='\033[95m'
+CYAN_ACIK='\033[96m'
 
 # Renk geçiş efekti fonksiyonu
 renk_gecisi() {
@@ -63,26 +63,26 @@ merkezle() {
     done <<< "$text"
 }
 
-# Logo (her satırda renk geçişi ile)
+# Logo
 LOGO=""
 declare -a LOGO_LINES_ARRAY
-LOGO_LINES_ARRAY=( "
- .S_SSSs     .S_sSSs     .S   .S    S.    .S_SSSs    
-.SS~SSSSS   .SS~YS%%b   .SS  .SS    SS.  .SS~SSSSS   
-S%S   SSSS  S%S   `S%b  S%S  S%S    S%S  S%S   SSSS  
-S%S    S%S  S%S    S%S  S%S  S%S    S%S  S%S    S%S  
-S%S SSSS%S  S%S    d*S  S&S  S&S    S%S  S%S SSSS%S  
-S&S  SSS%S  S&S   .S*S  S&S  S&S    S&S  S&S  SSS%S  
-S&S    S&S  S&S_sdSSS   S&S  S&S    S&S  S&S    S&S  
-S&S    S&S  S&S~YSY%b   S&S  S&S    S&S  S&S    S&S  
-S*S    S&S  S*S   `S%b  S*S  S*b    S*S  S*S    S&S  
-S*S    S*S  S*S    S%S  S*S  S*S.   S*S  S*S    S*S  
-S*S    S*S  S*S    S&S  S*S   SSSbs_S*S  S*S    S*S  
-SSS    S*S  S*S    SSS  S*S    YSSP~SSS  SSS    S*S  
-       SP   SP          SP                      SP   
-       Y    Y           Y                       Y    
-ArıvaNetHunter By: @AtahanArslan Channel: @ArivaTools                                                     
-")
+LOGO_LINES_ARRAY=(
+    " .S_SSSs     .S_sSSs     .S   .S    S.    .S_SSSs    "
+    ".SS~SSSSS   .SS~YS%%b   .SS  .SS    SS.  .SS~SSSSS   "
+    "S%S   SSSS  S%S   \`S%b  S%S  S%S    S%S  S%S   SSSS  "
+    "S%S    S%S  S%S    S%S  S%S  S%S    S%S  S%S    S%S  "
+    "S%S SSSS%S  S%S    d*S  S&S  S&S    S%S  S%S SSSS%S  "
+    "S&S  SSS%S  S&S   .S*S  S&S  S&S    S&S  S&S  SSS%S  "
+    "S&S    S&S  S&S_sdSSS   S&S  S&S    S&S  S&S    S&S  "
+    "S&S    S&S  S&S~YSY%b   S&S  S&S    S&S  S&S    S&S  "
+    "S*S    S&S  S*S   \`S%b  S*S  S*b    S*S  S*S    S&S  "
+    "S*S    S*S  S*S    S%S  S*S  S*S.   S*S  S*S    S*S  "
+    "S*S    S*S  S*S    S&S  S*S   SSSbs_S*S  S*S    S*S  "
+    "SSS    S*S  S*S    SSS  S*S    YSSP~SSS  SSS    S*S  "
+    "       SP   SP          SP                      SP    "
+    "       Y    Y           Y                       Y     "
+    "ArıvaNetHunter By: @AtahanArslan Channel: @ArivaTools"
+)
 for line in "${LOGO_LINES_ARRAY[@]}"; do
     LOGO+="$(renk_gecisi "$line" "$KIRMIZI" "$SARI")\n"
 done
@@ -107,9 +107,18 @@ renkli_yaz() {
 
 log_yaz() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI" 2>/dev/null || {
-        echo -e "$(renk_gecisi "Hata: Log dosyasına yazılamadı: $LOG_DOSYASI" "$KIRMIZI" "$SARI")" >&2
+        renkli_yaz "Hata: Log dosyasına yazılamadı: $LOG_DOSYASI" "$KIRMIZI" "$SARI" >&2
         exit 1
     }
+}
+
+# İnternet bağlantısı kontrolü
+check_internet() {
+    if ! ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+        renkli_yaz "❌ Hata: İnternet bağlantısı yok!" "$KIRMIZI" "$SARI"
+        log_yaz "Hata: İnternet bağlantısı yok."
+        exit 1
+    fi
 }
 
 ekran_hazirla
@@ -143,7 +152,7 @@ function ask() {
         case "$cevap" in
             Y*|y*|E*|e*) return 0 ;;
             N*|n*|H*|h*) return 1 ;;
-            *) renkli_yaz "⚠️ Gecersiz cevap! Lutfen E veya H girin." "$SARI" "$KIRMIZI" ;;
+            *) renkli_yaz "⚠️ Geçersiz cevap! Lütfen E veya H girin." "$SARI" "$KIRMIZI" ;;
         esac
     done
 }
@@ -176,7 +185,7 @@ function set_strings() {
         echo -e "$(renk_gecisi "[2] NetHunter ARMhf (minimal)" "$MAVI" "$YESIL")"
         echo -e "$(renk_gecisi "[3] NetHunter ARMhf (nano)" "$MAVI" "$YESIL")"
     fi
-    echo -e "$(renk_gecisi "Kurmak istediginiz goruntuyu secin (1-3):" "$SARI" "$KIRMIZI")"
+    echo -e "$(renk_gecisi "Kurmak istediğiniz görüntüyü seçin (1-3):" "$SARI" "$KIRMIZI")"
     read -r wimg || {
         renkli_yaz "❌ Hata: Görüntü seçimi alınamadı." "$KIRMIZI" "$SARI"
         log_yaz "Hata: Görüntü seçimi alınamadı."
@@ -186,7 +195,7 @@ function set_strings() {
         1) wimg="full" ;;
         2) wimg="minimal" ;;
         3) wimg="nano" ;;
-        *) ekran_hazirla; renkli_yaz "⚠️ Gecersiz secim, 'full' secildi." "$SARI" "$KIRMIZI"; wimg="full" ;;
+        *) ekran_hazirla; renkli_yaz "⚠️ Geçersiz seçim, 'full' seçildi." "$SARI" "$KIRMIZI"; wimg="full" ;;
     esac
     CHROOT="kali-${SYS_ARCH}"
     IMAGE_NAME="kali-nethunter-daily-dev-rootfs-${wimg}-${SYS_ARCH}.tar.xz"
@@ -197,7 +206,7 @@ function set_strings() {
 function prepare_fs() {
     unset KEEP_CHROOT
     if [ -d "$CHROOT" ]; then
-        if ask "Mevcut chroot bulundu. Silip yenisini olusturmak ister misiniz?" "N"; then
+        if ask "Mevcut chroot bulundu. Silip yenisini oluşturmak ister misiniz?" "N"; then
             rm -rf "$CHROOT" 2>/dev/null || {
                 renkli_yaz "❌ Hata: Eski chroot silinemedi." "$KIRMIZI" "$SARI"
                 log_yaz "Hata: Eski chroot silinemedi."
@@ -213,7 +222,7 @@ function prepare_fs() {
 
 function cleanup() {
     if [ -f "$IMAGE_NAME" ]; then
-        if ask "Indirilen rootfs dosyasi silinsin mi?" "N"; then
+        if ask "İndirilen rootfs dosyası silinsin mi?" "N"; then
             rm -f "$IMAGE_NAME" "$SHA_NAME" 2>/dev/null || {
                 renkli_yaz "❌ Hata: İndirilen dosyalar silinemedi." "$KIRMIZI" "$SARI"
                 log_yaz "Hata: İndirilen dosyalar silinemedi."
@@ -228,15 +237,15 @@ function check_dependencies() {
     ekran_hazirla
     if ! apt-get update -y &>/dev/null; then
         apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &>/dev/null || {
-            renkli_yaz "❌ Hata: Paket listesi guncellenemedi." "$KIRMIZI" "$SARI"
+            renkli_yaz "❌ Hata: Paket listesi güncellenemedi." "$KIRMIZI" "$SARI"
             log_yaz "Hata: apt-get update başarısız."
             exit 1
         }
     fi
-    for i in proot tar axel wget; do
+    for i in proot tar axel wget curl ping; do
         if ! command -v "$i" >/dev/null 2>&1; then
             apt install -y "$i" &>/dev/null || {
-                renkli_yaz "❌ Hata: $i kurulamadi." "$KIRMIZI" "$SARI"
+                renkli_yaz "❌ Hata: $i kurulamadı." "$KIRMIZI" "$SARI"
                 log_yaz "Hata: $i kurulamadı."
                 exit 1
             }
@@ -258,7 +267,7 @@ function get_url() {
 function get_rootfs() {
     unset KEEP_IMAGE
     if [ -f "$IMAGE_NAME" ]; then
-        if ask "Mevcut goruntu dosyasi bulundu. Silip yenisini indirmek ister misiniz?" "N"; then
+        if ask "Mevcut görüntü dosyası bulundu. Silip yenisini indirmek ister misiniz?" "N"; then
             rm -f "$IMAGE_NAME" 2>/dev/null || {
                 renkli_yaz "❌ Hata: Mevcut görüntü dosyası silinemedi." "$KIRMIZI" "$SARI"
                 log_yaz "Hata: Mevcut görüntü dosyası silinemedi."
@@ -272,9 +281,20 @@ function get_rootfs() {
     fi
     ekran_hazirla
     get_url
-    if ! axel -n 4 "$ROOTFS_URL" 2>/dev/null; then
-        if ! wget --continue "$ROOTFS_URL" -O "$IMAGE_NAME" 2>/dev/null; then
-            renkli_yaz "❌ Hata: Indirme basarisiz. Internet baglantinizi kontrol edin." "$KIRMIZI" "$SARI"
+    check_internet
+    renkli_yaz "📥 Rootfs indiriliyor: $IMAGE_NAME" "$MAVI" "$YESIL"
+    if command -v axel >/dev/null 2>&1; then
+        if ! axel -n 4 -a "$ROOTFS_URL" -o "$IMAGE_NAME"; then
+            renkli_yaz "⚠️ Axel ile indirme başarısız, wget deneniyor..." "$SARI" "$KIRMIZI"
+            if ! wget --progress=bar:force "$ROOTFS_URL" -O "$IMAGE_NAME"; then
+                renkli_yaz "❌ Hata: İndirme başarısız. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SARI"
+                log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
+                exit 1
+            fi
+        fi
+    else
+        if ! wget --progress=bar:force "$ROOTFS_URL" -O "$IMAGE_NAME"; then
+            renkli_yaz "❌ Hata: İndirme başarısız. İnternet bağlantınızı kontrol edin." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
             exit 1
         fi
@@ -284,6 +304,7 @@ function get_rootfs() {
         log_yaz "Hata: Rootfs dosyası indirilemedi."
         exit 1
     }
+    renkli_yaz "✅ Rootfs başarıyla indirildi." "$YESIL" "$MAVI"
     log_yaz "Kök dosya sistemi indirildi: $IMAGE_NAME"
 }
 
@@ -294,11 +315,13 @@ function check_sha_url() {
 function verify_sha() {
     if [ -z "$KEEP_IMAGE" ] && [ -f "$SHA_NAME" ]; then
         ekran_hazirla
+        renkli_yaz "🔍 Rootfs doğrulanıyor..." "$MAVI" "$YESIL"
         if ! sha512sum -c "$SHA_NAME" 2>/dev/null; then
-            renkli_yaz "❌ Hata: Rootfs bozuk. Lutfen tekrar deneyin." "$KIRMIZI" "$SARI"
+            renkli_yaz "❌ Hata: Rootfs bozuk. Lütfen tekrar deneyin." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs bozuk."
             exit 1
         fi
+        renkli_yaz "✅ Rootfs doğrulandı." "$YESIL" "$MAVI"
     fi
 }
 
@@ -314,7 +337,8 @@ function get_sha() {
             }
         fi
         if check_sha_url; then
-            if ! axel -n 4 "$SHA_URL" 2>/dev/null && ! wget --continue "$SHA_URL" -O "$SHA_NAME" 2>/dev/null; then
+            renkli_yaz "📥 SHA dosyası indiriliyor..." "$MAVI" "$YESIL"
+            if ! axel -n 4 -a "$SHA_URL" -o "$SHA_NAME" && ! wget --progress=bar:force "$SHA_URL" -O "$SHA_NAME"; then
                 log_yaz "Uyarı: SHA dosyası indirilemedi."
             else
                 verify_sha
@@ -329,8 +353,9 @@ function get_sha() {
 function extract_rootfs() {
     if [ -z "$KEEP_CHROOT" ]; then
         ekran_hazirla
+        renkli_yaz "📦 Rootfs çıkarılıyor..." "$MAVI" "$YESIL"
         if ! proot --link2symlink tar -xf "$IMAGE_NAME" 2>/dev/null; then
-            renkli_yaz "❌ Hata: Cikarma basarisiz." "$KIRMIZI" "$SARI"
+            renkli_yaz "❌ Hata: Çıkarma başarısız." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs çıkarılamadı."
             exit 1
         fi
@@ -339,6 +364,7 @@ function extract_rootfs() {
             log_yaz "Hata: Rootfs çıkarılamadı, chroot dizini oluşturulmadı."
             exit 1
         }
+        renkli_yaz "✅ Rootfs başarıyla çıkarıldı." "$YESIL" "$MAVI"
         log_yaz "Kök dosya sistemi çıkarıldı."
     fi
 }
@@ -440,9 +466,9 @@ passwd_kex() {
 status_kex() {
     sessions=\$(vncserver -list 2>/dev/null | sed s/"TigerVNC"/"NetHunter KeX"/)
     if [[ \$sessions == *"590"* ]]; then
-        printf "\n\${sessions}\n\nKeX istemcisini kullanarak baglanabilirsiniz.\n"
+        printf "\n\${sessions}\n\nKeX istemcisini kullanarak bağlanabilirsiniz.\n"
     elif [ -n "\$starting_kex" ]; then
-        printf '\nKeX sunucusu baslatilamadi.\n"nethunter kex kill" ile deneyin veya Termux\'u yeniden baslatin.\n'
+        printf '\nKeX sunucusu başlatılamadı.\n"nethunter kex kill" ile deneyin veya Termux\'u yeniden başlatın.\n'
     fi
     return 0
 }
@@ -533,15 +559,15 @@ function fix_uid() {
 
 cd "$HOME" 2>/dev/null || {
     ekran_hazirla
-    renkli_yaz "❌ Hata: Ev dizinine erisilemedi." "$KIRMIZI" "$SARI"
+    renkli_yaz "❌ Hata: Ev dizinine erişilemedi." "$KIRMIZI" "$SARI"
     log_yaz "Hata: Ev dizinine erişilemedi."
     exit 1
 }
+check_dependencies
 ekran_hazirla
 get_arch
 set_strings
 prepare_fs
-check_dependencies
 get_rootfs
 get_sha
 extract_rootfs
@@ -557,4 +583,5 @@ create_kex_launcher
 fix_uid
 
 ekran_hazirla
+renkli_yaz "🎉 Kurulum başarıyla tamamlandı!" "$YESIL" "$MAVI"
 log_yaz "Kurulum başarıyla tamamlandı."

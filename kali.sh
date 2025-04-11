@@ -63,26 +63,26 @@ merkezle() {
     done <<< "$text"
 }
 
-# Logo
+# Logo (sizin attığınız haliyle)
 LOGO=""
 declare -a LOGO_LINES_ARRAY
-LOGO_LINES_ARRAY=(
-    " .S_SSSs     .S_sSSs     .S   .S    S.    .S_SSSs    "
-    ".SS~SSSSS   .SS~YS%%b   .SS  .SS    SS.  .SS~SSSSS   "
-    "S%S   SSSS  S%S   \`S%b  S%S  S%S    S%S  S%S   SSSS  "
-    "S%S    S%S  S%S    S%S  S%S  S%S    S%S  S%S    S%S  "
-    "S%S SSSS%S  S%S    d*S  S&S  S&S    S%S  S%S SSSS%S  "
-    "S&S  SSS%S  S&S   .S*S  S&S  S&S    S&S  S&S  SSS%S  "
-    "S&S    S&S  S&S_sdSSS   S&S  S&S    S&S  S&S    S&S  "
-    "S&S    S&S  S&S~YSY%b   S&S  S&S    S&S  S&S    S&S  "
-    "S*S    S&S  S*S   \`S%b  S*S  S*b    S*S  S*S    S&S  "
-    "S*S    S*S  S*S    S%S  S*S  S*S.   S*S  S*S    S*S  "
-    "S*S    S*S  S*S    S&S  S*S   SSSbs_S*S  S*S    S*S  "
-    "SSS    S*S  S*S    SSS  S*S    YSSP~SSS  SSS    S*S  "
-    "       SP   SP          SP                      SP    "
-    "       Y    Y           Y                       Y     "
-    "ArıvaNetHunter By: @AtahanArslan Channel: @ArivaTools"
-)
+LOGO_LINES_ARRAY=( "
+ .S_SSSs     .S_sSSs     .S   .S    S.    .S_SSSs    
+.SS~SSSSS   .SS~YS%%b   .SS  .SS    SS.  .SS~SSSSS   
+S%S   SSSS  S%S   `S%b  S%S  S%S    S%S  S%S   SSSS  
+S%S    S%S  S%S    S%S  S%S  S%S    S%S  S%S    S%S  
+S%S SSSS%S  S%S    d*S  S&S  S&S    S%S  S%S SSSS%S  
+S&S  SSS%S  S&S   .S*S  S&S  S&S    S&S  S&S  SSS%S  
+S&S    S&S  S&S_sdSSS   S&S  S&S    S&S  S&S    S&S  
+S&S    S&S  S&S~YSY%b   S&S  S&S    S&S  S&S    S&S  
+S*S    S&S  S*S   `S%b  S*S  S*b    S*S  S*S    S&S  
+S*S    S*S  S*S    S%S  S*S  S*S.   S*S  S*S    S*S  
+S*S    S*S  S*S    S&S  S*S   SSSbs_S*S  S*S    S*S  
+SSS    S*S  S*S    SSS  S*S    YSSP~SSS  SSS    S*S  
+       SP   SP          SP                      SP   
+       Y    Y           Y                       Y    
+ArıvaNetHunter By: @AtahanArslan Channel: @ArivaTools                                                     
+")
 for line in "${LOGO_LINES_ARRAY[@]}"; do
     LOGO+="$(renk_gecisi "$line" "$KIRMIZI" "$SARI")\n"
 done
@@ -117,6 +117,17 @@ check_internet() {
     if ! ping -c 1 8.8.8.8 >/dev/null 2>&1; then
         renkli_yaz "❌ Hata: İnternet bağlantısı yok!" "$KIRMIZI" "$SARI"
         log_yaz "Hata: İnternet bağlantısı yok."
+        exit 1
+    fi
+}
+
+# Disk alanı kontrolü
+check_disk_space() {
+    local required_space=2000000  # 2GB in KB
+    local available_space=$(df -k "$HOME" | tail -1 | awk '{print $4}')
+    if [ "$available_space" -lt "$required_space" ]; then
+        renkli_yaz "❌ Hata: Yeterli disk alanı yok! En az 2GB boş alan gerekli." "$KIRMIZI" "$SARI"
+        log_yaz "Hata: Yeterli disk alanı yok ($available_space KB mevcut)."
         exit 1
     fi
 }
@@ -316,7 +327,7 @@ function verify_sha() {
     if [ -z "$KEEP_IMAGE" ] && [ -f "$SHA_NAME" ]; then
         ekran_hazirla
         renkli_yaz "🔍 Rootfs doğrulanıyor..." "$MAVI" "$YESIL"
-        if ! sha512sum -c "$SHA_NAME" 2>/dev/null; then
+        if ! sha512sum -c "$SHA_NAME"; then
             renkli_yaz "❌ Hata: Rootfs bozuk. Lütfen tekrar deneyin." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs bozuk."
             exit 1
@@ -354,9 +365,18 @@ function extract_rootfs() {
     if [ -z "$KEEP_CHROOT" ]; then
         ekran_hazirla
         renkli_yaz "📦 Rootfs çıkarılıyor..." "$MAVI" "$YESIL"
-        if ! proot --link2symlink tar -xf "$IMAGE_NAME" 2>/dev/null; then
-            renkli_yaz "❌ Hata: Çıkarma başarısız." "$KIRMIZI" "$SARI"
-            log_yaz "Hata: Rootfs çıkarılamadı."
+        # Dosya kontrolü
+        if [ ! -f "$IMAGE_NAME" ]; then
+            renkli_yaz "❌ Hata: $IMAGE_NAME dosyası bulunamadı." "$KIRMIZI" "$SARI"
+            log_yaz "Hata: $IMAGE_NAME dosyası bulunamadı."
+            exit 1
+        fi
+        # Disk alanı kontrolü
+        check_disk_space
+        # Çıkarma işlemi (proot olmadan direkt tar ile)
+        if ! tar -xf "$IMAGE_NAME"; then
+            renkli_yaz "❌ Hata: Çıkarma başarısız. Dosya bozuk olabilir veya izin eksik." "$KIRMIZI" "$SARI"
+            log_yaz "Hata: Rootfs çıkarılamadı - tar komutu başarısız."
             exit 1
         fi
         [ ! -d "$CHROOT" ] && {

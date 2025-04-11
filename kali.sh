@@ -4,7 +4,7 @@ VERSION=2024091801
 BASE_URL="https://image-nethunter.kali.org/nethunter-fs/kali-daily"
 USERNAME="kali"
 LOG_DOSYASI="$HOME/nethunter_kurulum_$(date +%Y%m%d_%H%M%S).log"
-LOGO_LINES=9  # Logonun satır sayısı
+LOGO_LINES=9
 
 KIRMIZI='\033[1;31m'
 YESIL='\033[1;32m'
@@ -14,7 +14,6 @@ ACIK_MAVI='\033[1;96m'
 MOR='\033[1;95m'
 SIFIRLA='\033[0m'
 
-# Yeni logo (ASCII, sabit ve kayma yapmayacak şekilde)
 LOGO=$(cat <<- EOF
 +-----------------------------------------+
 | NetHunter Kurulum Araci v$VERSION       |
@@ -26,27 +25,26 @@ LOGO=$(cat <<- EOF
 EOF
 )
 
-# Ekranı temizle ve logo için sabit alan ayır (kayma önlendi)
 ekran_hazirla() {
     clear
-    local cols=$(tput cols)
+    local cols
+    cols=$(tput cols 2>/dev/null || echo 80)
     while IFS= read -r line; do
         local len=${#line}
         local padding=$(( (cols - len) / 2 ))
-        [ $padding -lt 0 ] && padding=0  # Terminal daraldığında taşmayı önle
+        [ $padding -lt 0 ] && padding=0
         printf "%${padding}s%s\n" "" "${KIRMIZI}${line}${SARI}"
     done <<< "$LOGO"
-    echo  # Boş satır ekleyerek metinlerin logodan ayrılmasını sağla
+    echo
 }
 
-# Metinleri sabit ve düzenli yaz (kayma yok)
 renkli_yaz() {
     local mesaj="$1"
     local renk="$2"
     local sifirla="$3"
-    local cols=$(tput cols)
+    local cols
+    cols=$(tput cols 2>/dev/null || echo 80)
     local len=${#mesaj}
-    # Mesaj terminal genişliğini aşarsa kırp
     if [ $len -gt $cols ]; then
         mesaj="${mesaj:0:$((cols - 3))}..."
     fi
@@ -54,10 +52,12 @@ renkli_yaz() {
 }
 
 log_yaz() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_DOSYASI" 2>/dev/null || {
+        echo "Hata: Log dosyasına yazılamadı: $LOG_DOSYASI" >&2
+        exit 1
+    }
 }
 
-# İlk ekran hazırlığı
 ekran_hazirla
 
 function unsupported_arch() {
@@ -80,7 +80,11 @@ function ask() {
     fi
     while true; do
         echo -e "${ACIK_MAVI}[?] $soru [$istem]${SIFIRLA}"
-        read -r cevap
+        read -r cevap || {
+            renkli_yaz "❌ Hata: Kullanıcı girdisi alınamadı." "$KIRMIZI" "$SIFIRLA"
+            log_yaz "Hata: Kullanıcı girdisi alınamadı."
+            exit 1
+        }
         [ -z "$cevap" ] && cevap="$varsayilan"
         case "$cevap" in
             Y*|y*|E*|e*) return 0 ;;
@@ -92,30 +96,38 @@ function ask() {
 
 function get_arch() {
     ekran_hazirla
-    renkli_yaz "🔍 Cihaz mimarisi belirleniyor..." "$MAVI" "$SIFIRLA"
-    case $(getprop ro.product.cpu.abi 2>/dev/null) in
+    local arch=$(getprop ro.product.cpu.abi 2>/dev/null)
+    case "$arch" in
         arm64-v8a) SYS_ARCH="arm64" ;;
         armeabi|armeabi-v7a) SYS_ARCH="armhf" ;;
         *) unsupported_arch ;;
     esac
-    renkli_yaz "✅ Mimari: $SYS_ARCH" "$YESIL" "$SIFIRLA"
+    [ -z "$SYS_ARCH" ] && {
+        ekran_hazirla
+        renkli_yaz "❌ Hata: Mimari belirlenemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Mimari belirlenemedi."
+        exit 1
+    }
     log_yaz "Mimari belirlendi: $SYS_ARCH"
 }
 
 function set_strings() {
     ekran_hazirla
-    renkli_yaz "🛠️ Kurulum secenekleri hazirlaniyor..." "$MAVI" "$SIFIRLA"
     if [ "$SYS_ARCH" = "arm64" ]; then
-        renkli_yaz "[1] NetHunter ARM64 (full)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[2] NetHunter ARM64 (minimal)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[3] NetHunter ARM64 (nano)" "$ACIK_MAVI" "$SIFIRLA"
+        echo -e "${ACIK_MAVI}[1] NetHunter ARM64 (full)${SIFIRLA}"
+        echo -e "${ACIK_MAVI}[2] NetHunter ARM64 (minimal)${SIFIRLA}"
+        echo -e "${ACIK_MAVI}[3] NetHunter ARM64 (nano)${SIFIRLA}"
     else
-        renkli_yaz "[1] NetHunter ARMhf (full)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[2] NetHunter ARMhf (minimal)" "$ACIK_MAVI" "$SIFIRLA"
-        renkli_yaz "[3] NetHunter ARMhf (nano)" "$ACIK_MAVI" "$SIFIRLA"
+        echo -e "${ACIK_MAVI}[1] NetHunter ARMhf (full)${SIFIRLA}"
+        echo -e "${ACIK_MAVI}[2] NetHunter ARMhf (minimal)${SIFIRLA}"
+        echo -e "${ACIK_MAVI}[3] NetHunter ARMhf (nano)${SIFIRLA}"
     fi
     echo -e "${SARI}Kurmak istediginiz goruntuyu secin (1-3):${SIFIRLA}"
-    read -r wimg
+    read -r wimg || {
+        renkli_yaz "❌ Hata: Görüntü seçimi alınamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Görüntü seçimi alınamadı."
+        exit 1
+    }
     case "$wimg" in
         1) wimg="full" ;;
         2) wimg="minimal" ;;
@@ -132,12 +144,14 @@ function prepare_fs() {
     unset KEEP_CHROOT
     if [ -d "$CHROOT" ]; then
         if ask "Mevcut chroot bulundu. Silip yenisini olusturmak ister misiniz?" "N"; then
-            rm -rf "$CHROOT" 2>/dev/null
-            renkli_yaz "✅ Eski chroot silindi." "$YESIL" "$SIFIRLA"
+            rm -rf "$CHROOT" 2>/dev/null || {
+                renkli_yaz "❌ Hata: Eski chroot silinemedi." "$KIRMIZI" "$SIFIRLA"
+                log_yaz "Hata: Eski chroot silinemedi."
+                exit 1
+            }
             log_yaz "Eski chroot silindi."
         else
             KEEP_CHROOT=1
-            renkli_yaz "⚠️ Mevcut chroot kullanilacak." "$SARI" "$SIFIRLA"
             log_yaz "Mevcut chroot korundu."
         fi
     fi
@@ -146,8 +160,11 @@ function prepare_fs() {
 function cleanup() {
     if [ -f "$IMAGE_NAME" ]; then
         if ask "Indirilen rootfs dosyasi silinsin mi?" "N"; then
-            rm -f "$IMAGE_NAME" "$SHA_NAME" 2>/dev/null
-            renkli_yaz "✅ Dosyalar temizlendi." "$YESIL" "$SIFIRLA"
+            rm -f "$IMAGE_NAME" "$SHA_NAME" 2>/dev/null || {
+                renkli_yaz "❌ Hata: İndirilen dosyalar silinemedi." "$KIRMIZI" "$SIFIRLA"
+                log_yaz "Hata: İndirilen dosyalar silinemedi."
+                exit 1
+            }
             log_yaz "İndirilen dosyalar silindi."
         fi
     fi
@@ -155,7 +172,6 @@ function cleanup() {
 
 function check_dependencies() {
     ekran_hazirla
-    renkli_yaz "🔧 Bagimliliklar kontrol ediliyor..." "$MAVI" "$SIFIRLA"
     if ! apt-get update -y &>/dev/null; then
         apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &>/dev/null || {
             renkli_yaz "❌ Hata: Paket listesi guncellenemedi." "$KIRMIZI" "$SIFIRLA"
@@ -164,10 +180,7 @@ function check_dependencies() {
         }
     fi
     for i in proot tar axel wget; do
-        if command -v "$i" >/dev/null 2>&1; then
-            renkli_yaz "✅ $i mevcut." "$YESIL" "$SIFIRLA"
-        else
-            renkli_yaz "📦 $i kuruluyor..." "$SARI" "$SIFIRLA"
+        if ! command -v "$i" >/dev/null 2>&1; then
             apt install -y "$i" &>/dev/null || {
                 renkli_yaz "❌ Hata: $i kurulamadi." "$KIRMIZI" "$SIFIRLA"
                 log_yaz "Hata: $i kurulamadı."
@@ -175,8 +188,11 @@ function check_dependencies() {
             }
         fi
     done
-    apt upgrade -y &>/dev/null
-    renkli_yaz "✅ Bagimliliklar hazir." "$YESIL" "$SIFIRLA"
+    apt upgrade -y &>/dev/null || {
+        renkli_yaz "❌ Hata: Sistem güncellenemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: apt upgrade başarısız."
+        exit 1
+    }
     log_yaz "Bağımlılıklar kontrol edildi ve güncellendi."
 }
 
@@ -189,30 +205,31 @@ function get_rootfs() {
     unset KEEP_IMAGE
     if [ -f "$IMAGE_NAME" ]; then
         if ask "Mevcut goruntu dosyasi bulundu. Silip yenisini indirmek ister misiniz?" "N"; then
-            rm -f "$IMAGE_NAME" 2>/dev/null
+            rm -f "$IMAGE_NAME" 2>/dev/null || {
+                renkli_yaz "❌ Hata: Mevcut görüntü dosyası silinemedi." "$KIRMIZI" "$SIFIRLA"
+                log_yaz "Hata: Mevcut görüntü dosyası silinemedi."
+                exit 1
+            }
         else
             KEEP_IMAGE=1
-            renkli_yaz "⚠️ Mevcut rootfs arsivi kullanilacak." "$SARI" "$SIFIRLA"
             log_yaz "Mevcut rootfs korundu."
             return
         fi
     fi
     ekran_hazirla
-    renkli_yaz "📥 Kok dosya sistemi indiriliyor..." "$MAVI" "$SIFIRLA"
     get_url
-    renkli_yaz "🔄 Axel ile indiriliyor..." "$ACIK_MAVI" "$SIFIRLA"
-    if axel -n 4 "$ROOTFS_URL" 2>/dev/null; then
-        renkli_yaz "✅ Indirme tamamlandi (axel)." "$YESIL" "$SIFIRLA"
-    else
-        renkli_yaz "⚠️ Axel basarisiz, wget ile deneniyor..." "$SARI" "$SIFIRLA"
-        if wget --continue "$ROOTFS_URL" -O "$IMAGE_NAME" 2>/dev/null; then
-            renkli_yaz "✅ Indirme tamamlandi (wget)." "$YESIL" "$SIFIRLA"
-        else
+    if ! axel -n 4 "$ROOTFS_URL" 2>/dev/null; then
+        if ! wget --continue "$ROOTFS_URL" -O "$IMAGE_NAME" 2>/dev/null; then
             renkli_yaz "❌ Hata: Indirme basarisiz. Internet baglantinizi kontrol edin." "$KIRMIZI" "$SIFIRLA"
             log_yaz "Hata: Rootfs indirilemedi - $ROOTFS_URL"
             exit 1
         fi
     fi
+    [ ! -f "$IMAGE_NAME" ] && {
+        renkli_yaz "❌ Hata: Rootfs dosyası indirilemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Rootfs dosyası indirilemedi."
+        exit 1
+    }
     log_yaz "Kök dosya sistemi indirildi: $IMAGE_NAME"
 }
 
@@ -223,33 +240,33 @@ function check_sha_url() {
 function verify_sha() {
     if [ -z "$KEEP_IMAGE" ] && [ -f "$SHA_NAME" ]; then
         ekran_hazirla
-        renkli_yaz "🔍 Butunluk kontrol ediliyor..." "$MAVI" "$SIFIRLA"
         if ! sha512sum -c "$SHA_NAME" 2>/dev/null; then
             renkli_yaz "❌ Hata: Rootfs bozuk. Lutfen tekrar deneyin." "$KIRMIZI" "$SIFIRLA"
             log_yaz "Hata: Rootfs bozuk."
             exit 1
         fi
-        renkli_yaz "✅ Butunluk dogrulandi." "$YESIL" "$SIFIRLA"
     fi
 }
 
 function get_sha() {
     if [ -z "$KEEP_IMAGE" ]; then
         ekran_hazirla
-        renkli_yaz "📥 SHA dosyasi aliniyor..." "$MAVI" "$SIFIRLA"
         get_url
-        [ -f "$SHA_NAME" ] && rm -f "$SHA_NAME" 2>/dev/null
+        if [ -f "$SHA_NAME" ]; then
+            rm -f "$SHA_NAME" 2>/dev/null || {
+                renkli_yaz "❌ Hata: Eski SHA dosyası silinemedi." "$KIRMIZI" "$SIFIRLA"
+                log_yaz "Hata: Eski SHA dosyası silinemedi."
+                exit 1
+            }
+        fi
         if check_sha_url; then
-            renkli_yaz "🔄 SHA indiriliyor..." "$ACIK_MAVI" "$SIFIRLA"
-            if axel -n 4 "$SHA_URL" 2>/dev/null || wget --continue "$SHA_URL" -O "$SHA_NAME" 2>/dev/null; then
+            if ! axel -n 4 "$SHA_URL" 2>/dev/null && ! wget --continue "$SHA_URL" -O "$SHA_NAME" 2>/dev/null; then
+                log_yaz "Uyarı: SHA dosyası indirilemedi."
+            else
                 verify_sha
                 log_yaz "SHA dosyası indirildi ve doğrulandı."
-            else
-                renkli_yaz "⚠️ SHA dosyasi indirilemedi, dogrulama atlanıyor." "$SARI" "$SIFIRLA"
-                log_yaz "Uyarı: SHA dosyası indirilemedi."
             fi
         else
-            renkli_yaz "⚠️ SHA dosyasi bulunamadi, dogrulama atlanıyor." "$SARI" "$SIFIRLA"
             log_yaz "Uyarı: SHA dosyası mevcut değil."
         fi
     fi
@@ -258,16 +275,17 @@ function get_sha() {
 function extract_rootfs() {
     if [ -z "$KEEP_CHROOT" ]; then
         ekran_hazirla
-        renkli_yaz "📤 Kok dosya sistemi cikariliyor..." "$MAVI" "$SIFIRLA"
         if ! proot --link2symlink tar -xf "$IMAGE_NAME" 2>/dev/null; then
             renkli_yaz "❌ Hata: Cikarma basarisiz." "$KIRMIZI" "$SIFIRLA"
             log_yaz "Hata: Rootfs çıkarılamadı."
             exit 1
         fi
-        renkli_yaz "✅ Cikarma tamamlandi." "$YESIL" "$SIFIRLA"
+        [ ! -d "$CHROOT" ] && {
+            renkli_yaz "❌ Hata: Rootfs çıkarılamadı, chroot dizini oluşturulmadı." "$KIRMIZI" "$SIFIRLA"
+            log_yaz "Hata: Rootfs çıkarılamadı, chroot dizini oluşturulmadı."
+            exit 1
+        }
         log_yaz "Kök dosya sistemi çıkarıldı."
-    else
-        renkli_yaz "⚠️ Mevcut rootfs dizini kullaniliyor." "$SARI" "$SIFIRLA"
     fi
 }
 
@@ -316,21 +334,25 @@ cmd="\$@"
 [ "\$#" -eq 0 ] && exec \$cmdline || \$cmdline -c "\$cmd"
 EOF
 
-    chmod 700 "$NH_LAUNCHER" 2>/dev/null
+    chmod 700 "$NH_LAUNCHER" 2>/dev/null || {
+        renkli_yaz "❌ Hata: NetHunter başlatıcısı oluşturulamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: NetHunter başlatıcısı oluşturulamadı."
+        exit 1
+    }
     [ -L "$NH_SHORTCUT" ] && rm -f "$NH_SHORTCUT" 2>/dev/null
-    [ ! -f "$NH_SHORTCUT" ] && ln -s "$NH_LAUNCHER" "$NH_SHORTCUT" >/dev/null 2>&1
+    [ ! -f "$NH_SHORTCUT" ] && ln -s "$NH_LAUNCHER" "$NH_SHORTCUT" >/dev/null 2>&1 || {
+        renkli_yaz "❌ Hata: NetHunter kısayolu oluşturulamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: NetHunter kısayolu oluşturulamadı."
+        exit 1
+    }
     log_yaz "NetHunter başlatıcısı oluşturuldu."
 }
 
 function check_kex() {
     if [ "$wimg" = "nano" ] || [ "$wimg" = "minimal" ]; then
         ekran_hazirla
-        renkli_yaz "🖥️ KeX paketleri kuruluyor..." "$MAVI" "$SIFIRLA"
-        if ! nh sudo apt update || ! nh sudo apt install -y tightvncserver kali-desktop-xfce &>/dev/null; then
-            renkli_yaz "⚠️ KeX paketleri kurulamadi, devam ediliyor..." "$SARI" "$SIFIRLA"
+        if ! nh sudo apt update &>/dev/null || ! nh sudo apt install -y tightvncserver kali-desktop-xfce &>/dev/null; then
             log_yaz "Uyarı: KeX paketleri kurulamadı."
-        else
-            renkli_yaz "✅ KeX paketleri kuruldu." "$YESIL" "$SIFIRLA"
         fi
     fi
 }
@@ -386,37 +408,76 @@ case \$1 in
 esac
 EOF
 
-    chmod 700 "$KEX_LAUNCHER" 2>/dev/null
+    chmod 700 "$KEX_LAUNCHER" 2>/dev/null || {
+        renkli_yaz "❌ Hata: KeX başlatıcısı oluşturulamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: KeX başlatıcısı oluşturulamadı."
+        exit 1
+    }
     log_yaz "KeX başlatıcısı oluşturuldu."
 }
 
 function fix_profile_bash() {
-    [ -f "$CHROOT/root/.bash_profile" ] && sed -i '/if/,/fi/d' "$CHROOT/root/.bash_profile" 2>/dev/null
+    [ -f "$CHROOT/root/.bash_profile" ] && sed -i '/if/,/fi/d' "$CHROOT/root/.bash_profile" 2>/dev/null || {
+        renkli_yaz "❌ Hata: Bash profili düzeltilemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Bash profili düzeltilemedi."
+        exit 1
+    }
     log_yaz "Bash profili düzeltildi."
 }
 
 function fix_resolv_conf() {
-    echo -e "nameserver 9.9.9.9\nnameserver 149.112.112.112" > "$CHROOT/etc/resolv.conf" 2>/dev/null
+    echo -e "nameserver 9.9.9.9\nnameserver 149.112.112.112" > "$CHROOT/etc/resolv.conf" 2>/dev/null || {
+        renkli_yaz "❌ Hata: DNS ayarları yapılandırılamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: DNS ayarları yapılandırılamadı."
+        exit 1
+    }
     log_yaz "DNS ayarları yapılandırıldı."
 }
 
 function fix_sudo() {
-    chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su" 2>/dev/null
-    echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT/etc/sudoers.d/kali" 2>/dev/null
-    echo "Set disable_coredump false" > "$CHROOT/etc/sudo.conf" 2>/dev/null
+    chmod +s "$CHROOT/usr/bin/sudo" "$CHROOT/usr/bin/su" 2>/dev/null || {
+        renkli_yaz "❌ Hata: Sudo izinleri ayarlanamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Sudo izinleri ayarlanamadı."
+        exit 1
+    }
+    echo "kali    ALL=(ALL:ALL) ALL" > "$CHROOT/etc/sudoers.d/kali" 2>/dev/null || {
+        renkli_yaz "❌ Hata: Sudoers dosyası oluşturulamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Sudoers dosyası oluşturulamadı."
+        exit 1
+    }
+    echo "Set disable_coredump false" > "$CHROOT/etc/sudo.conf" 2>/dev/null || {
+        renkli_yaz "❌ Hata: Sudo yapılandırması ayarlanamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Sudo yapılandırması ayarlanamadı."
+        exit 1
+    }
     log_yaz "Sudo ayarları yapılandırıldı."
 }
 
 function fix_uid() {
-    USRID=$(id -u)
-    GRPID=$(id -g)
-    nh -r usermod -u "$USRID" kali 2>/dev/null
-    nh -r groupmod -g "$GRPID" kali 2>/dev/null
+    USRID=$(id -u 2>/dev/null) || {
+        renkli_yaz "❌ Hata: Kullanıcı ID alınamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Kullanıcı ID alınamadı."
+        exit 1
+    }
+    GRPID=$(id -g 2>/dev/null) || {
+        renkli_yaz "❌ Hata: Grup ID alınamadı." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Grup ID alınamadı."
+        exit 1
+    }
+    nh -r usermod -u "$USRID" kali 2>/dev/null || {
+        renkli_yaz "❌ Hata: Kullanıcı ID düzeltilemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Kullanıcı ID düzeltilemedi."
+        exit 1
+    }
+    nh -r groupmod -g "$GRPID" kali 2>/dev/null || {
+        renkli_yaz "❌ Hata: Grup ID düzeltilemedi." "$KIRMIZI" "$SIFIRLA"
+        log_yaz "Hata: Grup ID düzeltilemedi."
+        exit 1
+    }
     log_yaz "Kullanıcı ID düzeltildi."
 }
 
-# Ana kurulum akışı
-cd "$HOME" || {
+cd "$HOME" 2>/dev/null || {
     ekran_hazirla
     renkli_yaz "❌ Hata: Ev dizinine erisilemedi." "$KIRMIZI" "$SIFIRLA"
     log_yaz "Hata: Ev dizinine erişilemedi."
@@ -434,7 +495,6 @@ create_launcher
 cleanup
 
 ekran_hazirla
-renkli_yaz "🛠️ NetHunter Termux icin yapilandiriliyor..." "$MAVI" "$SIFIRLA"
 fix_profile_bash
 fix_resolv_conf
 fix_sudo
@@ -443,13 +503,4 @@ create_kex_launcher
 fix_uid
 
 ekran_hazirla
-renkli_yaz "🎉 Kali NetHunter Termux icin basariyla kuruldu!" "$YESIL" "$SIFIRLA"
-renkli_yaz "📌 Kullanim Komutlari:" "$YESIL" "$SIFIRLA"
-renkli_yaz "  nethunter             # NetHunter CLI baslat" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "  nethunter kex passwd  # KeX sifresi ayarla" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "  nethunter kex &       # NetHunter GUI baslat" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "  nethunter kex stop    # NetHunter GUI durdur" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "  nethunter -r          # Root olarak calistir" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "  nh                    # nethunter kisayolu" "$ACIK_MAVI" "$SIFIRLA"
-renkli_yaz "📜 Log dosyasi: $LOG_DOSYASI" "$SARI" "$SIFIRLA"
 log_yaz "Kurulum başarıyla tamamlandı."

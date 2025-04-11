@@ -132,6 +132,15 @@ check_disk_space() {
     fi
 }
 
+# Dosya bütünlüğünü kontrol etme
+check_file_integrity() {
+    if ! tar -tf "$IMAGE_NAME" >/dev/null 2>&1; then
+        renkli_yaz "❌ Hata: $IMAGE_NAME dosyası bozuk veya geçersiz." "$KIRMIZI" "$SARI"
+        log_yaz "Hata: $IMAGE_NAME dosyası bozuk veya geçersiz."
+        exit 1
+    fi
+}
+
 ekran_hazirla
 
 function unsupported_arch() {
@@ -365,25 +374,45 @@ function extract_rootfs() {
     if [ -z "$KEEP_CHROOT" ]; then
         ekran_hazirla
         renkli_yaz "📦 Rootfs çıkarılıyor..." "$MAVI" "$YESIL"
+        
         # Dosya kontrolü
         if [ ! -f "$IMAGE_NAME" ]; then
             renkli_yaz "❌ Hata: $IMAGE_NAME dosyası bulunamadı." "$KIRMIZI" "$SARI"
             log_yaz "Hata: $IMAGE_NAME dosyası bulunamadı."
             exit 1
         fi
+        
+        # Dosya bütünlüğü kontrolü
+        check_file_integrity
+        
         # Disk alanı kontrolü
         check_disk_space
-        # Çıkarma işlemi (proot olmadan direkt tar ile)
-        if ! tar -xf "$IMAGE_NAME"; then
-            renkli_yaz "❌ Hata: Çıkarma başarısız. Dosya bozuk olabilir veya izin eksik." "$KIRMIZI" "$SARI"
+        
+        # İzin kontrolü ve düzeltme
+        if [ ! -w "$HOME" ]; then
+            renkli_yaz "❌ Hata: $HOME dizinine yazma izni yok." "$KIRMIZI" "$SARI"
+            log_yaz "Hata: $HOME dizinine yazma izni yok."
+            exit 1
+        fi
+        chmod -R u+w "$HOME" 2>/dev/null || {
+            renkli_yaz "⚠️ Uyarı: $HOME izinleri düzeltilemedi, ancak devam ediliyor." "$SARI" "$KIRMIZI"
+            log_yaz "Uyarı: $HOME izinleri düzeltilemedi."
+        }
+        
+        # Çıkarma işlemi (ayrıntılı hata mesajı ile)
+        if ! tar -xvf "$IMAGE_NAME" -C "$HOME"; then
+            renkli_yaz "❌ Hata: Çıkarma başarısız. Dosya bozuk olabilir veya izin eksik. Detaylar logda." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs çıkarılamadı - tar komutu başarısız."
             exit 1
         fi
+        
+        # Çıkarma sonrası kontrol
         [ ! -d "$CHROOT" ] && {
             renkli_yaz "❌ Hata: Rootfs çıkarılamadı, chroot dizini oluşturulmadı." "$KIRMIZI" "$SARI"
             log_yaz "Hata: Rootfs çıkarılamadı, chroot dizini oluşturulmadı."
             exit 1
         }
+        
         renkli_yaz "✅ Rootfs başarıyla çıkarıldı." "$YESIL" "$MAVI"
         log_yaz "Kök dosya sistemi çıkarıldı."
     fi
